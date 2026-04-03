@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WS Fragment Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f2e8d4;--surface:#fdf6e8;--surface2:#f7edd5;
+  --border:#c8a96a;--border-light:#e0c990;
+  --gold:#a0720a;--gold-bright:#c48c10;
+  --text:#3a2404;--text-mid:#7a5218;--text-dim:#b08040;
+  --green:#166534;--green-bg:#dcfce7;
+  --red:#991b1b;--red-bg:#fee2e2;
+  --blue:#1e40af;--blue-bg:#dbeafe;
+  --amber:#92400e;--amber-bg:#fef3c7;
+}
+body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:16px;}
+.hdr{background:var(--surface);border-bottom:2px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.hdr-left{display:flex;align-items:center;gap:10px;}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;color:var(--gold);transition:background .15s;flex-shrink:0;}
+.back-btn:hover{background:var(--border-light);}
+.back-btn.hidden{visibility:hidden;}
+.breadcrumb{font-size:.78rem;color:var(--text-dim);font-style:italic;line-height:1.3;}
+.breadcrumb strong{color:var(--text-mid);font-style:normal;}
+.hdr-title{font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gold-bright);letter-spacing:.08em;}
+.export-btn{font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;letter-spacing:.06em;padding:8px 14px;border-radius:4px;background:var(--gold-bright);color:white;border:none;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.export-btn:hover{background:var(--gold);}
+.export-btn.hidden{display:none;}
+.main{padding:20px 16px;max-width:600px;margin:0 auto;padding-bottom:100px;}
+.screen{display:none;}.screen.active{display:block;}
+.setup-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:28px;text-align:center;margin-top:20px;}
+.setup-logo{font-family:'Cinzel',serif;font-size:1.4rem;font-weight:700;color:var(--gold-bright);margin-bottom:6px;letter-spacing:.1em;}
+.setup-sub{font-size:.85rem;color:var(--text-dim);font-style:italic;margin-bottom:24px;line-height:1.6;}
+.field-label{display:block;text-align:left;font-family:'Cinzel',serif;font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-mid);margin-bottom:6px;}
+.text-input{width:100%;padding:12px 14px;background:var(--bg);border:2px solid var(--border-light);border-radius:6px;font-family:'Crimson Pro',serif;font-size:1rem;color:var(--text);outline:none;transition:border-color .15s;}
+.text-input:focus{border-color:var(--gold-bright);}
+.start-btn{width:100%;margin-top:16px;padding:14px;font-family:'Cinzel',serif;font-size:.8rem;font-weight:700;letter-spacing:.08em;background:var(--gold-bright);color:white;border:none;border-radius:6px;cursor:pointer;transition:background .15s;}
+.start-btn:hover{background:var(--gold);}
+.screen-title{font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gold);letter-spacing:.08em;margin-bottom:4px;}
+.screen-hint{font-size:.82rem;color:var(--text-dim);font-style:italic;margin-bottom:16px;line-height:1.5;}
+.list-item{background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .15s;}
+.list-item:hover{border-color:var(--border);background:var(--surface2);}
+.list-item-name{font-family:'Cinzel',serif;font-size:.82rem;font-weight:600;color:var(--text);letter-spacing:.04em;}
+.list-item-meta{font-size:.74rem;color:var(--text-dim);margin-top:2px;font-style:italic;}
+.list-item-right{display:flex;align-items:center;gap:8px;}
+.chevron{color:var(--text-dim);font-size:.9rem;}
+.status-pill{padding:2px 9px;border-radius:999px;font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;letter-spacing:.04em;}
+.pill-done{background:var(--green-bg);color:var(--green);}
+.pill-partial{background:var(--amber-bg);color:var(--amber);}
+.pill-new{background:var(--surface2);color:var(--text-dim);}
+.empty-list{text-align:center;padding:32px 16px;color:var(--text-dim);font-style:italic;font-size:.85rem;background:var(--surface);border-radius:8px;border:1px dashed var(--border-light);}
+.scene-summary{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
+.scene-summary-name{font-family:'Cinzel',serif;font-size:.85rem;font-weight:700;color:var(--gold-bright);}
+.scene-summary-meta{font-size:.78rem;color:var(--text-dim);font-style:italic;}
+.frag-count-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.frag-count-label{font-size:.82rem;color:var(--text-mid);flex:1;}
+.count-btns{display:flex;gap:6px;}
+.count-btn{padding:7px 14px;border-radius:4px;font-family:'Cinzel',serif;font-size:.7rem;font-weight:700;border:2px solid var(--border-light);background:var(--surface);color:var(--text-mid);cursor:pointer;transition:all .12s;}
+.count-btn.active{border-color:var(--gold-bright);background:var(--amber-bg);color:var(--gold);}
+.frag-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.frag-card{background:var(--surface);border:2px solid var(--border-light);border-radius:8px;padding:10px 8px;}
+.frag-card.status-missing{border-color:#fca5a5;background:#fff5f5;}
+.frag-card.status-owned{border-color:#86efac;background:#f0fdf4;}
+.frag-card.status-duplicate{border-color:#93c5fd;background:#eff6ff;}
+.frag-pos{font-family:'Cinzel',serif;font-size:.6rem;font-weight:600;color:var(--text-dim);letter-spacing:.08em;margin-bottom:6px;}
+.star-row{display:flex;gap:2px;margin-bottom:8px;justify-content:center;}
+.star-btn{width:20px;height:20px;border:none;background:transparent;cursor:default;font-size:.82rem;padding:0;line-height:1;color:#d1a020;opacity:.2;}
+.star-btn.lit{opacity:1;}
+.status-toggle{display:flex;gap:3px;margin-bottom:6px;}
+.toggle-btn{flex:1;padding:5px 2px;border-radius:3px;border:1px solid var(--border-light);background:transparent;cursor:pointer;font-size:.62rem;font-family:'Cinzel',serif;font-weight:600;color:var(--text-dim);transition:all .12s;text-align:center;}
+.toggle-btn.active-missing{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.toggle-btn.active-owned{background:#dcfce7;border-color:#86efac;color:#166534;}
+.toggle-btn.active-duplicate{background:#dbeafe;border-color:#93c5fd;color:#1e40af;}
+.dupe-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;}
+.dupe-adj{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:.9rem;color:var(--text-mid);display:flex;align-items:center;justify-content:center;}
+.dupe-adj:hover{background:var(--border-light);}
+.dupe-val{font-family:'Cinzel',serif;font-size:.78rem;font-weight:700;color:var(--blue);min-width:20px;text-align:center;}
+.progress-sticky{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--border);padding:12px 16px;z-index:100;}
+.progress-inner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.progress-text{font-size:.78rem;color:var(--text-mid);}
+.progress-bar-wrap{flex:1;height:6px;background:var(--border-light);border-radius:999px;overflow:hidden;}
+.progress-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold),var(--gold-bright));transition:width .3s;}
+.done-btn{font-family:'Cinzel',serif;font-size:.7rem;font-weight:700;padding:8px 16px;border-radius:4px;background:var(--green);color:white;border:none;cursor:pointer;white-space:nowrap;}
+.done-btn:hover{background:#15803d;}
+.export-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;}
+.export-title{font-family:'Cinzel',serif;font-size:.9rem;font-weight:700;color:var(--gold-bright);margin-bottom:12px;}
+.export-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.export-stat{background:var(--surface2);border-radius:6px;padding:10px;text-align:center;}
+.export-stat-num{font-family:'Cinzel',serif;font-size:1.4rem;font-weight:700;color:var(--gold-bright);}
+.export-stat-lbl{font-size:.68rem;color:var(--text-dim);font-style:italic;}
+.export-scene-list{max-height:200px;overflow-y:auto;}
+.export-scene-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:.8rem;}
+.export-scene-item:last-child{border-bottom:none;}
+.export-dl-btn{width:100%;padding:14px;margin-top:4px;font-family:'Cinzel',serif;font-size:.8rem;font-weight:700;background:var(--gold-bright);color:white;border:none;border-radius:6px;cursor:pointer;}
+.export-dl-btn:hover{background:var(--gold);}
+.export-dl-btn.discord{background:#5865f2;}
+.export-dl-btn.discord:hover{background:#4752c4;}
+.export-dl-btn.danger{background:transparent;color:#991b1b;border:1px solid #fca5a5;margin-top:24px;}
+.export-dl-btn.danger:hover{background:#fee2e2;}
+.export-section-label{font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-top:20px;margin-bottom:4px;}
+.export-hint{text-align:center;font-size:.78rem;color:var(--text-dim);font-style:italic;margin-top:10px;line-height:1.6;}
+.copy-confirm{display:none;text-align:center;padding:8px 12px;border-radius:6px;font-size:.8rem;font-style:italic;margin-top:6px;}
+.copy-confirm.ok{background:#dcfce7;color:#166534;}
+.copy-confirm.err{background:#fee2e2;color:#991b1b;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <button class="back-btn hidden" id="back-btn" onclick="goBack()">&#8592;</button>
+    <div>
+      <div class="hdr-title" id="hdr-title">Fragment Inventory</div>
+      <div class="breadcrumb" id="breadcrumb"></div>
+    </div>
+  </div>
+  <button class="export-btn hidden" id="export-top-btn" onclick="goExport()">&#8595; Export</button>
+</header>
+
+<main class="main">
+  <div class="screen active" id="screen-setup">
+    <div class="setup-card">
+      <div class="setup-logo">&#9733; Fragment Tracker</div>
+      <div class="setup-sub">Enter your name to start tracking your fragment inventory. Your data saves automatically as you go.</div>
+      <label class="field-label" for="member-name-input">Your Alliance Name</label>
+      <input class="text-input" id="member-name-input" type="text" placeholder="e.g. Mike" autocomplete="off" maxlength="30">
+      <button class="start-btn" onclick="doSetup()">Start Tracking &#8594;</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-albums">
+    <div class="screen-title">Albums</div>
+    <div class="screen-hint">Select an album to browse its themes.</div>
+    <div id="album-list"></div>
+  </div>
+
+  <div class="screen" id="screen-themes">
+    <div class="screen-title">Themes</div>
+    <div class="screen-hint">Select a theme to view its scenes.</div>
+    <div id="theme-list"></div>
+  </div>
+
+  <div class="screen" id="screen-scenes">
+    <div class="screen-title">Scenes</div>
+    <div class="screen-hint">Select a scene to enter your fragment status.</div>
+    <div id="scene-list"></div>
+  </div>
+
+  <div class="screen" id="screen-fragments">
+    <div class="scene-summary">
+      <div class="scene-summary-name" id="frag-scene-name"></div>
+      <div class="scene-summary-meta" id="frag-scene-meta"></div>
+    </div>
+    <div id="frag-scene-info" style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:12px;padding:0 2px;"></div>
+    <div class="frag-grid" id="frag-grid"></div>
+  </div>
+
+  <div class="screen" id="screen-export">
+    <div class="export-card">
+      <div class="export-title">&#9660; Summary</div>
+      <div class="export-stats" id="export-stats"></div>
+      <div style="font-family:'Cinzel',serif;font-size:.7rem;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Scenes Logged</div>
+      <div class="export-scene-list" id="export-scene-list"></div>
+    </div>
+
+    <div class="export-section-label">Send to Coordinator</div>
+    <button class="export-dl-btn" onclick="downloadJSON()" id="dl-btn">&#8595; Download Inventory JSON</button>
+    <button class="export-dl-btn" onclick="copyJSON()" id="copy-btn" style="display:none;background:#1e40af;">&#128203; Copy Inventory JSON</button>
+    <div id="copy-confirm-json" class="copy-confirm"></div>
+    <div class="export-hint" id="export-hint-text">Send this file to your coordinator to be matched with alliance members who have fragments you need.</div>
+
+    <div class="export-section-label">Share to Discord</div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
+    <div id="copy-confirm-missing" class="copy-confirm"></div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('dupes')" style="margin-top:6px;">&#128203; Copy Duplicates List</button>
+    <div id="copy-confirm-dupes" class="copy-confirm"></div>
+
+    <div class="export-section-label">Data</div>
+    <button class="export-dl-btn danger" onclick="clearDB()">&#128465; Clear All Saved Data</button>
+  </div>
+</main>
+
+<div class="progress-sticky" id="progress-sticky" style="display:none;">
+  <div class="progress-inner">
+    <div class="progress-text" id="progress-text">0 / 15</div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    <button class="done-btn" onclick="saveScene()">Save Scene &#10003;</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// CATALOG DATA — generated by ws-catalog-builder.html
+// Do not edit this block manually; use the catalog builder instead.
+/* WS_CATALOG_START */
+const KNOWN = {"albums":["Tundra Album"],"themes":{"Tundra Album":["Ballad of Wind and Cold","Battlefield Epic","Crystalline Mysteries","Daybreak Island","Divine Weapons","Explore the World","Frost Dragon Empire","Infernal Power","Kings of Combat","Nature's Strength","Prerogative of the Flame","Rekindled Flames","Song of Heroes","Spectacular Adventures","The Labyrinth","Tundra Alliance"]},"scenes":{"Ballad of Wind and Cold":["Honor and Glory","Cold Highways","Words of the Forgotten","Monument to the Flame","Alliance Showdown","State Versus State","The Summit of Battle","Castle of Conflict","Remaker of Order"],"Battlefield Epic":["Imperial Foundry","King of the Battlefield","Orichalcum","City of Kings","Pilot's Paradise","Great Contest","Canyon Clash","Hero's Glory","Grand Banquet"],"Crystalline Mysteries":["Fiery Crystal","Mining the Fire","Airs of Empire","Sins of Empire","Fiery Born","The Burning Legion","Promises of Fire","Crystalline Rage","Fire Crystal Era"],"Daybreak Island":["Daybreak Island","Legend","Island of Dreams","Tree of Life","Call of the Sea","Distant Resonance","Caravan Visit","New Home","Daybreak Song"],"Divine Weapons":["Master Blacksmith","Legendary Divine Weapon","Tundra Trade Route","Merchant Escort","Cryptid Invasion","Steam Rhapsody","Ice Journey","Exotic Charm","Essence Stones"],"Explore the World":["War on Winter","Exploration Journal","Hunting Guild","The Raging Bear","Treasure Kingdom","Wealth is Knowledge","Ruins of Old","Cryptid Days","Call of the Stars"],"Frost Dragon Empire":["Frost Dragon Empire","The Dragonic Legend","Wings of Empire","The Dragonic Legion","Rediscovery","Future Vision","War and Wealth","Banquet for a King","A Tyrant Crowned"],"Infernal Power":["Helios Warriors","Crystal Strength","Crystal Fragmentation","Miner Madness","Engine of the Future","Risky Business","Treasure of Empire","The Communicative Heart","The Guardians"],"Kings of Combat":["League of Honor","A Tournament of Heroes","Duel of Greatness","The Callisto","Kings of Combat","The Arena Gamers","The Helios Cannon","Behemoth","And the Bell Tolls"],"Nature's Strength":["Friend of Nature","Wild at Heart","Beast Unleashed","Wild Legion","Pets in Arms","Master Tamer","Superhuman Strength","Cassia's Struggle","Call of the Wild"],"Prerogative of the Flame":["Whispers of the World","Temptations of Power","Doomsday Man","The Hunters","The Mad King","The Last Empress","The Last Collapse","A Long Slumber","Sky City"],"Rekindled Flames":["Furnace","City Founding","Dawn Alliance","Decisions","Menace Afoot","Heroes","Food Power","A New Order","True Explorer"],"Song of Heroes":["Dauntless Heroes","Snow Angel","Everyday Champions","Arcadia's Legacy","I Am the Fire","Artisan Architect","Life Versus Death","The Ice Breakers","Epic of a New World"],"Spectacular Adventures":["Fishing Tournament","Snowbusters","Bandit","Red Haired Joe","A Queen Arises","The Eagles","Bounty Hunter","Wandering Merchant","Tundra Adventure"],"The Labyrinth":["Underworld Mysteries","The World Below","Digging to Danger","Fungal Forest","Furnace of the Gods","The Undergrounders","The Project","Gaia's Heart","The Deepest Echo"],"Tundra Alliance":["Alliance Building","One Heart","Heroes Aid","Alliance Resources","Twisted Obsession","Virtues and Crimes","Children of the New World","Horn of Command","Battlefield Epic"]}};
+const FRAGMENTS = {"Battlefield Epic":{"Imperial Foundry":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"King of the Battlefield":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":4}],"Orichalcum":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"City of Kings":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Pilot's Paradise":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Great Contest":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":4},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Canyon Clash":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Hero's Glory":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Grand Banquet":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Spectacular Adventures":{"Fishing Tournament":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Snowbusters":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Bandit":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Red Haired Joe":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"A Queen Arises":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"The Eagles":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Bounty Hunter":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Wandering Merchant":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Tundra Adventure":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Divine Weapons":{"Master Blacksmith":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Legendary Divine Weapon":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":3},{"position":14,"stars":4},{"position":15,"stars":4}],"Tundra Trade Route":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":4}],"Merchant Escort":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Cryptid Invasion":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Steam Rhapsody":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Ice Journey":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Exotic Charm":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Essence Stones":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"The Labyrinth":{"Underworld Mysteries":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"The World Below":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Digging to Danger":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Fungal Forest":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Furnace of the Gods":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"The Undergrounders":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Project":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Gaia's Heart":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Deepest Echo":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Nature's Strength":{"Friend of Nature":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Wild at Heart":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Beast Unleashed":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Wild Legion":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Pets in Arms":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Master Tamer":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Superhuman Strength":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Kasia's Struggle":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Call of the Wild":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Crystalline Mysteries":{"Fiery Crystal":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Mining the Fire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Heirs of Empire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Sins of Empire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Fire Reborn":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"The Burning Legion":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Promises of Fire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Crystalline Rage":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Fire Crystal Era":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Ballad of Wind and Cold":{"Honor and Glory":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Cold Highways":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Words of the Forgotten":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Monument to the Flame":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Alliance Showdown":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"State Versus State":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Summit of Battle":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Castle of Conflict":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Remaker of Order":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Infernal Power":{"Helios Warriors":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Crystal Strength":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Crystal Fragmentation":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Miner Madness":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Engine of the Future":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Risky Business":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Treasure of Empire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Communicative Heart":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Guardians":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Kings of Combat":{"League of Honor":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"A Tournament of Heroes":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Duel of Greatness":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"The Callisto":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Kings of Combat":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"The Arena Gamers":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Helios Cannon":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Behemoth":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"And the Bell Tolls":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Prerogative of the Flame":{"Whispers of the World":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Temptations of Power":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Doomsday Man":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"The Hunters":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"The Mad King":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"The Last Empress":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"The Last Collapse":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"A Long Slumber":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Sky City":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Frostdragon Empire":{"Frostdragon Empire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"The Dragonic Legend":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Wings of Empire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"The Dragonic Legion":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Rediscovery":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Future Vision":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"War and Wealth":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Banquet for a King":[{"position":1,"stars":1},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":3},{"position":6,"stars":3},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"A Tyrant Crowned":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Rekindled Flames":{"Furnace":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":1},{"position":6,"stars":1},{"position":7,"stars":1},{"position":8,"stars":2},{"position":9,"stars":2}],"City Founding":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":1},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3}],"Dawn Alliance":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3}],"Decisions":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4}],"Menace Afoot":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4}],"Heroes":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Food Power":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":3},{"position":14,"stars":4},{"position":15,"stars":4}],"A New Order":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"True Explorer":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}]},"Song of Heroes":{"Dauntless Heroes":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":1},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3}],"Snow Angel":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3}],"Everyday Champions":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4}],"Arcadia's Legacy":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4}],"I Am the Fire":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Artisan Architect":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Life Vs Death":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"The Ice Breakers":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Epic of a New World":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}]},"Explore the World":{"War on Winter":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3}],"Exploration Journal":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4}],"Hunting Guild":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4}],"The Raging Bear":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Treasure Kingdom":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":4}],"Wealth is Knowledge":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Ruins of Old":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Cryptid Days":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Call of the Stars":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Daybreak Island":{"Daybreak Island Legend":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":1},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4}],"Island of Dreams":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4}],"Tree of Life":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Call of the Sea":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Distant Resonance":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Caravan Visit":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"New Home":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Daybreak Song":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Island Splendors":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":2},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]},"Tundra Alliance":{"Alliance Building":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4}],"One Heart":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4}],"Heroes Aid":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":2},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":3},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5}],"Alliance Resources":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":2},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":3},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5}],"Twisted Obsession":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":1},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5}],"Virtues and Crimes":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":2},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":3},{"position":10,"stars":3},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":4},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Children of the New World":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Horn of Command":[{"position":1,"stars":1},{"position":2,"stars":1},{"position":3,"stars":2},{"position":4,"stars":2},{"position":5,"stars":2},{"position":6,"stars":3},{"position":7,"stars":3},{"position":8,"stars":3},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":4},{"position":13,"stars":4},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}],"Battlefield Epic":[{"position":1,"stars":2},{"position":2,"stars":2},{"position":3,"stars":3},{"position":4,"stars":3},{"position":5,"stars":4},{"position":6,"stars":4},{"position":7,"stars":4},{"position":8,"stars":4},{"position":9,"stars":4},{"position":10,"stars":4},{"position":11,"stars":4},{"position":12,"stars":5},{"position":13,"stars":5},{"position":14,"stars":5},{"position":15,"stars":5},{"position":16,"stars":5},{"position":17,"stars":5},{"position":18,"stars":5}]}};
+/* WS_CATALOG_END */
+// ================================================================
+
+const KEY = 'ws_member_v2';
+let state = {screen:'setup',memberName:'',album:'',theme:'',scene:'',fragCount:15,inventory:{}};
+let fragData = [];
+
+function load(){try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);Object.assign(state,s);}}catch{}}
+function persist(){localStorage.setItem(KEY,JSON.stringify({memberName:state.memberName,inventory:state.inventory}));}
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.getElementById('progress-sticky').style.display=name==='fragments'?'block':'none';
+  document.getElementById('back-btn').classList.toggle('hidden',name==='setup'||name==='albums');
+  const hasData=Object.keys(state.inventory).length>0;
+  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||!hasData);
+  updateHeader(name);
+}
+
+function updateHeader(s){
+  const t=document.getElementById('hdr-title'),b=document.getElementById('breadcrumb');
+  if(s==='setup'){t.textContent='Fragment Inventory';b.textContent='';return;}
+  if(s==='albums'){t.textContent=state.memberName;b.textContent='Select Album';return;}
+  if(s==='themes'){t.textContent=state.album;b.textContent=state.memberName;return;}
+  if(s==='scenes'){t.textContent=state.theme;b.innerHTML='<strong>'+state.album+'</strong>';return;}
+  if(s==='fragments'){t.textContent=state.scene;b.innerHTML='<strong>'+state.album+' &rsaquo; '+state.theme+'</strong>';return;}
+  if(s==='export'){t.textContent='Export';b.textContent=state.memberName;return;}
+}
+
+function goBack(){
+  const s=state.screen;
+  if(s==='themes')nav('albums');
+  else if(s==='scenes')nav('themes');
+  else if(s==='fragments')nav('scenes');
+  else if(s==='export')nav('albums');
+}
+
+function nav(screen){
+  state.screen=screen;
+  if(screen==='albums')renderAlbums();
+  if(screen==='themes')renderThemes();
+  if(screen==='scenes')renderScenes();
+  if(screen==='fragments')renderFragments();
+  if(screen==='export')renderExport();
+  showScreen(screen);
+}
+
+function goExport(){nav('export');initExportButtons();}
+
+function doSetup(){
+  const name=document.getElementById('member-name-input').value.trim();
+  if(!name){document.getElementById('member-name-input').focus();return;}
+  state.memberName=name;persist();nav('albums');
+}
+
+function selectAlbum(name){state.album=name;nav('themes');}
+
+function renderAlbums(){
+  const listEl=document.getElementById('album-list');
+  listEl.innerHTML=(KNOWN.albums||[]).map(function(a){
+    const logged=Object.values(state.inventory).filter(function(s){return s.album===a;}).length;
+    const total=(KNOWN.themes[a]||[]).reduce(function(sum,t){return sum+(KNOWN.scenes[t]||[]).length;},0);
+    const pct=total>0?Math.round(logged/total*100):0;
+    const pillClass=logged===total&&total>0?'pill-done':logged>0?'pill-partial':'pill-new';
+    const pillText=logged===total&&total>0?'Complete':logged+'/'+total;
+    return '<div class="list-item" onclick="selectAlbum(\''+esc(a)+'\')"><div><div class="list-item-name">'+a+'</div><div class="list-item-meta">'+(KNOWN.themes[a]||[]).length+' themes &bull; '+total+' scenes total</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+  }).join('');
+}
+
+function selectTheme(name){state.theme=name;nav('scenes');}
+
+function renderThemes(){
+  const listEl=document.getElementById('theme-list');
+  const themes=KNOWN.themes[state.album]||[];
+  listEl.innerHTML=themes.map(function(t){
+    const allScenes=KNOWN.scenes[t]||[];
+    const logged=allScenes.filter(function(s){return !!state.inventory[sceneKey(state.album,t,s)];}).length;
+    const done=allScenes.filter(function(s){const k=sceneKey(state.album,t,s);return state.inventory[k]&&state.inventory[k].completed;}).length;
+    const pillClass=done===allScenes.length&&allScenes.length>0?'pill-done':logged>0?'pill-partial':'pill-new';
+    const pillText=done===allScenes.length&&allScenes.length>0?'Complete':logged+'/'+allScenes.length;
+    return '<div class="list-item" onclick="selectTheme(\''+esc(t)+'\')"><div><div class="list-item-name">'+t+'</div><div class="list-item-meta">'+allScenes.length+' scenes</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+  }).join('');
+}
+
+function sceneKey(a,t,s){return a+'||'+t+'||'+s;}
+
+function selectScene(name){state.scene=name;nav('fragments');}
+
+function renderScenes(){
+  const listEl=document.getElementById('scene-list');
+  const scenes=KNOWN.scenes[state.theme]||[];
+  listEl.innerHTML=scenes.map(function(s){
+    const k=sceneKey(state.album,state.theme,s);
+    const sc=state.inventory[k];
+    const frags=sc&&sc.fragments||[];
+    const dbFrags=FRAGMENTS[state.theme]&&FRAGMENTS[state.theme][s]||[];
+    const total=dbFrags.length;
+    const owned=frags.filter(function(f){return f.status!=='MISSING';}).length;
+    const miss=frags.filter(function(f){return f.status==='MISSING';}).length;
+    const dup=frags.filter(function(f){return f.status==='DUPLICATE';}).length;
+    const entered=frags.filter(function(f){return f.status!==null;}).length;
+    let pillClass,pillText;
+    if(!sc||!entered){pillClass='pill-new';pillText='Not started';}
+    else if(sc.completed){pillClass='pill-done';pillText='Complete';}
+    else{pillClass='pill-partial';pillText=entered+'/'+total;}
+    const meta=entered>0?(miss+' missing'+(dup?' &bull; '+dup+' dupe':'')):'Tap to enter status';
+    return '<div class="list-item" onclick="selectScene(\''+esc(s)+'\')"><div><div class="list-item-name">'+s+'</div><div class="list-item-meta">'+meta+'</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+  }).join('');
+}
+
+function getDbFragments(theme, scene) {
+  // Look up fragment definitions from the embedded database
+  if (FRAGMENTS[theme] && FRAGMENTS[theme][scene]) return FRAGMENTS[theme][scene];
+  return null;
+}
+
+function renderFragments(){
+  const k=sceneKey(state.album,state.theme,state.scene);
+  const sc=state.inventory[k];
+  document.getElementById('frag-scene-name').textContent=state.scene;
+  document.getElementById('frag-scene-meta').textContent=state.album+' \u203a '+state.theme;
+
+  // Load fragment definitions from database
+  const dbFrags = getDbFragments(state.theme, state.scene);
+  const existing = sc&&sc.fragments||[];
+  const existingMap = {};
+  existing.forEach(function(f){ existingMap[f.position]=f; });
+
+  if (dbFrags) {
+    // Build from database, merging any saved status data
+    fragData = dbFrags.map(function(dbf){
+      const saved = existingMap[dbf.position];
+      return {
+        position: dbf.position,
+        stars: dbf.stars,
+        status: saved ? saved.status : null,
+        duplicate_count: saved ? (saved.duplicate_count||0) : 0,
+        requestable: dbf.stars < 5
+      };
+    });
+    var info = fragData.length + ' fragments \u2014 tap \u2715 Missing, \u2713 Owned, or \u2605 Duplicate for each';
+    document.getElementById('frag-scene-info').textContent = info;
+  } else {
+    // Fallback: build manually if scene not in database
+    var cnt = existing.length || 15;
+    fragData = Array.from({length:cnt},function(_,i){
+      return existing[i]?Object.assign({},existing[i]):{position:i+1,stars:0,status:null,duplicate_count:0};
+    });
+    document.getElementById('frag-scene-info').textContent = fragData.length + ' fragments \u2014 star ratings not in database, tap to set manually';
+  }
+
+  renderFragGrid();
+  updateProgress();
+}
+
+function renderFragGrid(){document.getElementById('frag-grid').innerHTML=fragData.map(function(f,i){return fragCardHTML(f,i);}).join('');}
+
+function fragCardHTML(f,i){
+  var sc=f.status?'status-'+f.status.toLowerCase():'';
+  // Stars are display-only -- from database
+  var starsHTML=[1,2,3,4,5].map(function(s){return '<span class="star-btn '+(s<=f.stars?'lit':'')+'">&#9733;</span>';}).join('');
+  var tM='toggle-btn'+(f.status==='MISSING'?' active-missing':'');
+  var tO='toggle-btn'+(f.status==='OWNED'?' active-owned':'');
+  var tD='toggle-btn'+(f.status==='DUPLICATE'?' active-duplicate':'');
+  var reqBadge=f.stars===5?'<div style="font-size:.55rem;color:#b08040;text-align:center;margin-top:2px;">no request</div>':'';
+  var dupeRow=f.status==='DUPLICATE'?'<div class="dupe-row"><button class="dupe-adj" onclick="adjDupe('+i+',-1)">&#8722;</button><span class="dupe-val">+'+(f.duplicate_count||1)+'</span><button class="dupe-adj" onclick="adjDupe('+i+',1)">+</button></div>':'';
+  return '<div class="frag-card '+sc+'" id="fc-'+i+'"><div class="frag-pos">FRAG '+f.position+'</div><div class="star-row">'+starsHTML+'</div>'+reqBadge+'<div class="status-toggle"><button class="'+tM+'" onclick="setStatus('+i+',\'MISSING\')">&#10005;</button><button class="'+tO+'" onclick="setStatus('+i+',\'OWNED\')">&#10003;</button><button class="'+tD+'" onclick="setStatus('+i+',\'DUPLICATE\')">&#9733;</button></div>'+dupeRow+'</div>';
+}
+function setStatus(idx,val){fragData[idx].status=val;if(val!=='DUPLICATE')fragData[idx].duplicate_count=0;refreshCard(idx);updateProgress();}
+function adjDupe(idx,delta){fragData[idx].duplicate_count=Math.max(1,(fragData[idx].duplicate_count||1)+delta);refreshCard(idx);}
+function refreshCard(idx){var el=document.getElementById('fc-'+idx);if(el)el.outerHTML=fragCardHTML(fragData[idx],idx);}
+
+function updateProgress(){
+  var entered=fragData.filter(function(f){return f.status!==null;}).length,total=fragData.length,pct=Math.round(entered/total*100);
+  document.getElementById('progress-text').textContent=entered+' / '+total+' entered';
+  document.getElementById('progress-fill').style.width=pct+'%';
+}
+
+function saveScene(){
+  var k=sceneKey(state.album,state.theme,state.scene);
+  var frags=fragData.map(function(f){return{position:f.position,stars:f.stars,status:f.status||'MISSING',duplicate_count:f.duplicate_count||0,requestable:f.stars>0&&f.stars<5};});
+  var owned=frags.filter(function(f){return f.status!=='MISSING';}).length;
+  state.inventory[k]={album:state.album,theme:state.theme,scene_name:state.scene,progress:{owned:owned,total:frags.length},fragments:frags,completed:owned===frags.length};
+  persist();nav('scenes');
+}
+
+function renderExport(){
+  var scenes=Object.values(state.inventory);
+  var allFrags=scenes.flatMap(function(s){return s.fragments||[];});
+  var missing=allFrags.filter(function(f){return f.status==='MISSING';}).length;
+  var dupes=allFrags.filter(function(f){return f.status==='DUPLICATE';}).length;
+  document.getElementById('export-stats').innerHTML='<div class="export-stat"><div class="export-stat-num">'+scenes.length+'</div><div class="export-stat-lbl">Scenes</div></div><div class="export-stat"><div class="export-stat-num">'+allFrags.length+'</div><div class="export-stat-lbl">Fragments</div></div><div class="export-stat"><div class="export-stat-num" style="color:#991b1b">'+missing+'</div><div class="export-stat-lbl">Missing</div></div><div class="export-stat"><div class="export-stat-num" style="color:#1e40af">'+dupes+'</div><div class="export-stat-lbl">Duplicates</div></div>';
+  document.getElementById('export-scene-list').innerHTML=scenes.map(function(sc){return '<div class="export-scene-item"><span>'+sc.scene_name+'</span><span style="color:var(--text-dim)">'+sc.theme+'</span><span style="color:var(--text-mid)">'+(sc.progress&&sc.progress.owned||0)+'/'+(sc.progress&&sc.progress.total||0)+'</span></div>';}).join('');
+}
+
+function isSafariIOS(){
+  return /iP(hone|od|ad)/.test(navigator.userAgent)&&/WebKit/.test(navigator.userAgent)&&!/CriOS/.test(navigator.userAgent);
+}
+
+function getPayload(){
+  return JSON.stringify({member_name:state.memberName,exported_at:new Date().toISOString(),version:'1',inventory:Object.values(state.inventory)},null,2);
+}
+
+function downloadJSON(){
+  var json=getPayload();
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='ws-inventory-'+state.memberName.replace(/\s+/g,'-').toLowerCase()+'-'+new Date().toISOString().split('T')[0]+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function showConfirm(id, ok, msg) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'copy-confirm ' + (ok ? 'ok' : 'err');
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display = 'none'; }, 4000);
+}
+
+function copyJSON(){
+  var json = getPayload();
+  safeCopy(json, function(ok){
+    showConfirm('copy-confirm-json', ok,
+      ok ? 'Copied! Paste into Notes or a message to your coordinator.'
+         : 'Could not copy automatically — long-press and choose Copy.');
+  });
+}
+
+function copyDiscord(type) {
+  var scenes = Object.values(state.inventory);
+  var allFrags = [];
+  scenes.forEach(function(sc) {
+    (sc.fragments||[]).forEach(function(f) {
+      allFrags.push({theme:sc.theme, scene:sc.scene_name, position:f.position, stars:f.stars, status:f.status, duplicate_count:f.duplicate_count||0});
+    });
+  });
+
+  var lines = [];
+  var confirmId;
+
+  if (type === 'missing') {
+    confirmId = 'copy-confirm-missing';
+    var missing = allFrags.filter(function(f){ return f.status === 'MISSING'; });
+    if (!missing.length) { showConfirm(confirmId, false, 'No missing fragments logged yet.'); return; }
+
+    // Sort by theme, then scene, then position
+    missing.sort(function(a,b){
+      if (a.theme !== b.theme) return a.theme.localeCompare(b.theme);
+      if (a.scene !== b.scene) return a.scene.localeCompare(b.scene);
+      return a.position - b.position;
+    });
+
+    lines.push('\uD83D\uDD0D **' + state.memberName + ' \u2014 Missing Fragments** (' + missing.length + ' total)');
+    lines.push('');
+
+    // Group by scene and list individual fragments under each
+    var currentScene = null;
+    missing.forEach(function(f) {
+      var sceneKey = f.theme + ' \u203a ' + f.scene;
+      if (sceneKey !== currentScene) {
+        if (currentScene !== null) lines.push('');
+        lines.push('**' + sceneKey + '**');
+        currentScene = sceneKey;
+      }
+      var stars = '\u2605'.repeat(f.stars) + '\u2606'.repeat(5 - f.stars);
+      var req = f.stars < 5 ? ' \u2705' : ' \u274C';
+      lines.push('\u2022 Fragment #' + f.position + ' ' + stars + req);
+    });
+
+  } else {
+    confirmId = 'copy-confirm-dupes';
+    var dupes = allFrags.filter(function(f){ return f.status === 'DUPLICATE'; });
+    if (!dupes.length) { showConfirm(confirmId, false, 'No duplicate fragments logged yet.'); return; }
+
+    // Sort by extras descending, then theme, scene, position
+    dupes.sort(function(a,b){
+      if (b.duplicate_count !== a.duplicate_count) return b.duplicate_count - a.duplicate_count;
+      if (a.theme !== b.theme) return a.theme.localeCompare(b.theme);
+      if (a.scene !== b.scene) return a.scene.localeCompare(b.scene);
+      return a.position - b.position;
+    });
+
+    var totalExtras = dupes.reduce(function(s,f){ return s + f.duplicate_count; }, 0);
+    lines.push('\uD83C\uDF81 **' + state.memberName + ' \u2014 Duplicates Available to Gift** (' + totalExtras + ' extras)');
+    lines.push('');
+
+    // Group by scene and list individual fragments under each
+    var currentScene = null;
+    dupes.forEach(function(f) {
+      var sceneKey = f.theme + ' \u203a ' + f.scene;
+      if (sceneKey !== currentScene) {
+        if (currentScene !== null) lines.push('');
+        lines.push('**' + sceneKey + '**');
+        currentScene = sceneKey;
+      }
+      var stars = '\u2605'.repeat(f.stars) + '\u2606'.repeat(5 - f.stars);
+      lines.push('\u2022 Fragment #' + f.position + ' ' + stars + ' \u2014 +' + f.duplicate_count + ' extra' + (f.duplicate_count > 1 ? 's' : ''));
+    });
+  }
+
+  safeCopy(lines.join('\n'), function(ok){
+    showConfirm(confirmId, ok,
+      ok ? 'Copied! Paste directly into Discord.'
+         : 'Could not copy automatically \u2014 long-press and choose Copy.');
+  });
+}
+
+function clearDB() {
+  if (!confirm('Clear all saved fragment data for ' + state.memberName + '? This cannot be undone.')) return;
+  state.inventory = {};
+  persist();
+  nav('albums');
+}
+
+function safeCopy(text,cb){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){cb(true);}).catch(function(){legacyCopy(text,cb);});
+  } else {
+    legacyCopy(text,cb);
+  }
+}
+
+function legacyCopy(text,cb){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0;';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  var ok=false;
+  try{ok=document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+  cb(ok);
+}
+
+function initExportButtons(){
+  if(isSafariIOS()){
+    document.getElementById('dl-btn').style.display='none';
+    document.getElementById('copy-btn').style.display='block';
+    document.getElementById('export-hint-text').textContent='Tap Copy, then paste the JSON into Notes or a message to send to your coordinator.';
+  }
+}
+
+function esc(str){return str.replace(/'/g,"\\'");}
+
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='setup')doSetup();});
+
+load();
+if(state.memberName)nav('albums');
+else showScreen('setup');
+</script>
+</body>
+</html>
