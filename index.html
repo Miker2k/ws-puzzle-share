@@ -394,7 +394,7 @@ function renderScenes(){
     let pillClass,pillText;
     if(!sc||!entered){pillClass='pill-new';pillText='Not started';}
     else if(sc.completed){pillClass='pill-done';pillText='Complete';}
-    else{pillClass='pill-partial';pillText=entered+'/'+total;}
+    else{pillClass='pill-partial';pillText=owned+'/'+total;}
     const meta=entered>0?(miss+' missing'+(dup?' &bull; '+dup+' dupe':'')):'Tap to enter status';
     return '<div class="list-item" onclick="selectScene(\''+esc(s)+'\')"><div><div class="list-item-name">'+s+'</div><div class="list-item-meta">'+meta+'</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
   }).join('');
