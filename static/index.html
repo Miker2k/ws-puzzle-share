@@ -514,7 +514,15 @@ function fragCardHTML(f,i){
   var dupeRow=f.status==='DUPLICATE'?'<div class="dupe-row"><button class="dupe-adj" onclick="adjDupe('+i+',-1)">&#8722;</button><span class="dupe-val">+'+(f.duplicate_count||1)+'</span><button class="dupe-adj" onclick="adjDupe('+i+',1)">+</button></div>':'';
   return '<div class="frag-card '+sc+'" id="fc-'+i+'"><div class="frag-pos">FRAG '+f.position+'</div><div class="star-row">'+starsHTML+'</div>'+reqBadge+'<div class="status-toggle"><button class="'+tM+'" onclick="setStatus('+i+',\'MISSING\')">&#10005;</button><button class="'+tO+'" onclick="setStatus('+i+',\'OWNED\')">&#10003;</button><button class="'+tD+'" onclick="setStatus('+i+',\'DUPLICATE\')">&#9733;</button></div>'+dupeRow+'</div>';
 }
-function setStatus(idx,val){fragData[idx].status=val;if(val!=='DUPLICATE')fragData[idx].duplicate_count=0;refreshCard(idx);updateProgress();}
+function setStatus(idx,val){
+  fragData[idx].status=val;
+  if(val==='DUPLICATE'){
+    if(!fragData[idx].duplicate_count) fragData[idx].duplicate_count=1;
+  } else {
+    fragData[idx].duplicate_count=0;
+  }
+  refreshCard(idx);updateProgress();
+}
 function markAll(val){
   fragData.forEach(function(f,i){f.status=val;if(val!=='DUPLICATE')f.duplicate_count=0;});
   renderFragGrid();updateProgress();
