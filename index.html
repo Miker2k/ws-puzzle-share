@@ -252,11 +252,10 @@ body{
       <div class="export-scene-list" id="export-scene-list"></div>
     </div>
 
-    <div class="export-section-label">Send to Coordinator</div>
-    <button class="export-dl-btn" onclick="downloadJSON()" id="dl-btn">&#8595; Download Inventory JSON</button>
-    <button class="export-dl-btn" onclick="copyJSON()" id="copy-btn" style="display:none;background:#1e40af;">&#128203; Copy Inventory JSON</button>
-    <div id="copy-confirm-json" class="copy-confirm"></div>
-    <div class="export-hint" id="export-hint-text">Send this file to your coordinator to be matched with alliance members who have fragments you need.</div>
+    <div class="export-section-label">Alliance Sync</div>
+    <button class="export-dl-btn" id="submit-btn" onclick="submitToAlliance()" style="background:linear-gradient(135deg,#1a4a8a,#2563eb);box-shadow:0 2px 8px rgba(37,99,235,0.3);">&#9650; Submit Inventory to Alliance</button>
+    <div id="submit-confirm" class="copy-confirm"></div>
+    <div class="export-hint">Submits your current inventory directly to the coordinator. Re-submit any time your fragments change.</div>
 
     <div class="export-section-label">Share to Discord</div>
     <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
@@ -292,6 +291,63 @@ const FRAGMENTS = {"Battlefield Epic":{"Imperial Foundry":[{"position":1,"stars"
 /* WS_CATALOG_END */
 // ================================================================
 
+// ================================================================
+// SUPABASE CONFIG
+// ================================================================
+const SUPABASE_URL = 'https://aevurncobtrfutcfufut.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
+
+async function submitToAlliance() {
+  var btn = document.getElementById('submit-btn');
+  var confirmEl = document.getElementById('submit-confirm');
+
+  if (!state.memberName) {
+    showConfirm('submit-confirm', false, 'Enter your in-game name before submitting.');
+    return;
+  }
+  var scenes = Object.values(state.inventory);
+  if (!scenes.length) {
+    showConfirm('submit-confirm', false, 'No scene data to submit yet.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting\u2026';
+  confirmEl.style.display = 'none';
+
+  try {
+    var payload = {
+      member_name: state.memberName,
+      submitted_at: new Date().toISOString(),
+      inventory: scenes
+    };
+
+    var res = await fetch(SUPABASE_URL + '/rest/v1/submissions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showConfirm('submit-confirm', true, 'Submitted! Your coordinator can now see your inventory.');
+    } else {
+      var err = await res.json().catch(function(){ return {}; });
+      throw new Error(err.message || 'HTTP ' + res.status);
+    }
+  } catch(e) {
+    showConfirm('submit-confirm', false, 'Submission failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '\u25b2 Submit Inventory to Alliance';
+  }
+}
+
+// ================================================================
 const KEY = 'ws_member_v2';
 let state = {screen:'setup',memberName:'',album:'',theme:'',scene:'',fragCount:15,inventory:{}};
 let fragData = [];
