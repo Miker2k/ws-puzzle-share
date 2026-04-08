@@ -501,7 +501,7 @@ function renderMatches(matches) {
       return `<div class="match-row">
         <div style="width:6px;align-self:stretch;border-radius:2px;background:${urgency};flex-shrink:0;"></div>
         <div>
-          <div class="match-scene">${m.scene}</div>
+          <div class="match-scene">${m.theme} › ${m.scene}</div>
           <div class="match-frag">Fragment #${m.position} &bull; ${starsHTML(m.stars)} &bull; ${m.remaining} remaining</div>
         </div>
         <div class="donor-chips">${donors}</div>
