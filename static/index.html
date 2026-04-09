@@ -170,6 +170,10 @@ body{
 .export-dl-btn.restore:hover{background:var(--surface2);box-shadow:none;transform:none;}
 .export-dl-btn.danger{background:transparent;color:var(--red);border:1px solid var(--red-border);box-shadow:none;margin-top:24px;}
 .export-dl-btn.danger:hover{background:var(--red-bg);box-shadow:none;transform:none;}
+.match-scene-group{margin-bottom:10px;}
+.match-scene-hdr{font-family:'Cinzel',serif;font-size:.75rem;font-weight:700;color:var(--gold-bright);padding:10px 14px;background:var(--surface2);border:1px solid var(--border-bright);border-radius:6px 6px 0 0;}
+.match-item{background:var(--surface);border:1px solid var(--border);border-top:none;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.match-item:last-child{border-radius:0 0 6px 6px;}
 .export-section-label{font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dim);margin-top:20px;margin-bottom:4px;padding-left:2px;}
 .export-hint{text-align:center;font-size:.76rem;color:var(--text-dim);font-style:italic;margin-top:8px;line-height:1.6;}
 .copy-confirm{display:none;text-align:center;padding:8px 12px;border-radius:6px;font-size:.78rem;font-style:italic;margin-top:6px;border:1px solid;}
@@ -196,7 +200,11 @@ body{
       <div class="setup-logo">&#10052; Fragment Tracker</div>
       <div class="setup-sub">Track your Whiteout Survival fragment inventory and coordinate gifting with your alliance.</div>
       <label class="field-label" for="member-name-input">Your In-Game Name</label>
-      <input class="text-input" id="member-name-input" type="text" placeholder="e.g. Mike" autocomplete="off" maxlength="30">
+      <input class="text-input" id="member-name-input" type="text" placeholder="e.g. Mikey" autocomplete="off" maxlength="30" style="margin-bottom:12px;">
+      <label class="field-label" for="member-alliance-input">Alliance Name</label>
+      <input class="text-input" id="member-alliance-input" type="text" placeholder="e.g. Dark Knights" autocomplete="off" maxlength="40" style="margin-bottom:12px;">
+      <label class="field-label" for="member-state-input">State Number</label>
+      <input class="text-input" id="member-state-input" type="number" placeholder="e.g. 142" min="1" max="9999" style="margin-bottom:4px;">
       <button class="start-btn" onclick="doSetup()">Start Tracking &#8594;</button>
       <div class="restore-divider">
         <div class="restore-divider-line"></div>
@@ -211,7 +219,24 @@ body{
     </div>
   </div>
 
+  <div class="screen" id="screen-profile">
+    <div class="setup-card" style="margin-top:0;">
+      <div class="setup-logo" style="font-size:1.1rem;">Complete Your Profile</div>
+      <div class="setup-sub">Your Alliance and State number are needed to match you with the right players.</div>
+      <div style="font-family:'Cinzel',serif;font-size:.72rem;color:var(--text-dim);margin-bottom:16px;">In-game name: <span id="profile-name-display" style="color:var(--gold-bright);"></span></div>
+      <label class="field-label" for="profile-alliance-input">Alliance Name</label>
+      <input class="text-input" id="profile-alliance-input" type="text" placeholder="e.g. Dark Knights" autocomplete="off" maxlength="40" style="margin-bottom:12px;">
+      <label class="field-label" for="profile-state-input">State Number</label>
+      <input class="text-input" id="profile-state-input" type="number" placeholder="e.g. 142" min="1" max="9999" style="margin-bottom:4px;">
+      <button class="start-btn" onclick="doProfileSave()">Save Profile &#8594;</button>
+    </div>
+  </div>
+
   <div class="screen" id="screen-albums">
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="quick-btn quick-btn-owned" style="flex:1;padding:12px 8px;font-size:.72rem;" onclick="goMatches()">&#9733; My Matches</button>
+      <button class="quick-btn" style="flex:0 0 auto;padding:12px 14px;border:1px solid var(--border-bright);color:var(--text-mid);background:transparent;border-radius:6px;font-family:Cinzel,serif;font-size:.68rem;font-weight:700;cursor:pointer;" onclick="goProfile()">&#9998; Profile</button>
+    </div>
     <div class="screen-title">Albums</div>
     <div class="screen-hint">Select an album to browse its themes.</div>
     <div id="album-list"></div>
@@ -229,7 +254,10 @@ body{
     <div id="scene-list"></div>
   </div>
 
-  <div class="screen" id="screen-fragments">
+  <div class="screen" id="screen-matches">
+    <div id="matches-loading" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Loading matches...</div>
+    <div id="matches-body"></div>
+  </div>
     <div class="scene-summary">
       <div>
         <div class="scene-summary-name" id="frag-scene-name"></div>
@@ -318,6 +346,8 @@ async function submitToAlliance() {
   try {
     var payload = {
       member_name: state.memberName,
+      alliance: state.alliance || null,
+      state_number: state.stateNumber || null,
       submitted_at: new Date().toISOString(),
       inventory: scenes
     };
@@ -349,30 +379,32 @@ async function submitToAlliance() {
 
 // ================================================================
 const KEY = 'ws_member_v2';
-let state = {screen:'setup',memberName:'',album:'',theme:'',scene:'',fragCount:15,inventory:{}};
+let state = {screen:'setup',memberName:'',alliance:'',stateNumber:'',album:'',theme:'',scene:'',fragCount:15,inventory:{}};
 let fragData = [];
 
 function load(){try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);Object.assign(state,s);}}catch{}}
-function persist(){localStorage.setItem(KEY,JSON.stringify({memberName:state.memberName,inventory:state.inventory}));}
+function persist(){localStorage.setItem(KEY,JSON.stringify({memberName:state.memberName,alliance:state.alliance,stateNumber:state.stateNumber,album:state.album,theme:state.theme,inventory:state.inventory}));}
 
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   document.getElementById('progress-sticky').style.display=name==='fragments'?'block':'none';
-  document.getElementById('back-btn').classList.toggle('hidden',name==='setup'||name==='albums');
+  document.getElementById('back-btn').classList.toggle('hidden',name==='setup'||name==='profile'||name==='albums');
   const hasData=Object.keys(state.inventory).length>0;
-  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||!hasData);
+  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||name==='profile'||!hasData);
   updateHeader(name);
 }
 
 function updateHeader(s){
   const t=document.getElementById('hdr-title'),b=document.getElementById('breadcrumb');
   if(s==='setup'){t.textContent='Fragment Inventory';b.textContent='';return;}
+  if(s==='profile'){t.textContent='My Profile';b.textContent=state.memberName||'';return;}
   if(s==='albums'){t.textContent=state.memberName;b.textContent='Select Album';return;}
   if(s==='themes'){t.textContent=state.album;b.textContent=state.memberName;return;}
   if(s==='scenes'){t.textContent=state.theme;b.innerHTML='<strong>'+state.album+'</strong>';return;}
   if(s==='fragments'){t.textContent=state.scene;b.innerHTML='<strong>'+state.album+' &rsaquo; '+state.theme+'</strong>';return;}
   if(s==='export'){t.textContent='Export';b.textContent=state.memberName;return;}
+  if(s==='matches'){t.textContent='My Matches';b.textContent=state.memberName;return;}
 }
 
 function goBack(){
@@ -381,6 +413,8 @@ function goBack(){
   else if(s==='scenes')nav('themes');
   else if(s==='fragments')nav('scenes');
   else if(s==='export')nav('albums');
+  else if(s==='matches')nav('albums');
+  else if(s==='profile')nav('albums');
 }
 
 function nav(screen){
@@ -389,16 +423,40 @@ function nav(screen){
   if(screen==='themes')renderThemes();
   if(screen==='scenes')renderScenes();
   if(screen==='fragments')renderFragments();
-  if(screen==='export')renderExport();
+  if(screen==='export'){renderExport();initExportButtons();}
+  if(screen==='matches')renderMatches();
+  if(screen==='profile')renderProfile();
   showScreen(screen);
 }
 
-function goExport(){nav('export');initExportButtons();}
+function goExport(){nav('export');}
+function goMatches(){nav('matches');}
+function goProfile(){nav('profile');}
 
 function doSetup(){
   const name=document.getElementById('member-name-input').value.trim();
+  const alliance=document.getElementById('member-alliance-input').value.trim();
+  const stateNum=document.getElementById('member-state-input').value.trim();
   if(!name){document.getElementById('member-name-input').focus();return;}
-  state.memberName=name;persist();nav('albums');
+  if(!alliance){document.getElementById('member-alliance-input').focus();return;}
+  if(!stateNum||isNaN(parseInt(stateNum))){document.getElementById('member-state-input').focus();return;}
+  state.memberName=name;state.alliance=alliance;state.stateNumber=parseInt(stateNum);
+  persist();nav('albums');
+}
+
+function doProfileSave(){
+  const alliance=document.getElementById('profile-alliance-input').value.trim();
+  const stateNum=document.getElementById('profile-state-input').value.trim();
+  if(!alliance){document.getElementById('profile-alliance-input').focus();return;}
+  if(!stateNum||isNaN(parseInt(stateNum))){document.getElementById('profile-state-input').focus();return;}
+  state.alliance=alliance;state.stateNumber=parseInt(stateNum);
+  persist();nav('albums');
+}
+
+function renderProfile(){
+  document.getElementById('profile-alliance-input').value=state.alliance||'';
+  document.getElementById('profile-state-input').value=state.stateNumber||'';
+  document.getElementById('profile-name-display').textContent=state.memberName;
 }
 
 function selectAlbum(name){state.album=name;nav('themes');}
@@ -542,6 +600,121 @@ function saveScene(){
   var owned=frags.filter(function(f){return f.status!=='MISSING';}).length;
   state.inventory[k]={album:state.album,theme:state.theme,scene_name:state.scene,progress:{owned:owned,total:frags.length},fragments:frags,completed:owned===frags.length};
   persist();nav('scenes');
+}
+
+async function renderMatches(){
+  var loadEl=document.getElementById('matches-loading');
+  var bodyEl=document.getElementById('matches-body');
+  loadEl.style.display='block';
+  bodyEl.innerHTML='';
+
+  if(!state.stateNumber){
+    loadEl.style.display='none';
+    bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Complete your profile with Alliance and State to see matches.</div>';
+    return;
+  }
+
+  try {
+    // Fetch all submissions for same state
+    var res = await fetch(
+      SUPABASE_URL+'/rest/v1/submissions?select=member_name,alliance,state_number,inventory,submitted_at&state_number=eq.'+state.stateNumber+'&order=submitted_at.desc',
+      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+    );
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    var rows = await res.json();
+
+    // Deduplicate to latest per member
+    var seen={}, members=[];
+    rows.forEach(function(r){
+      if(!seen[r.member_name]){seen[r.member_name]=true;members.push(r);}
+    });
+
+    // Build my missing fragments (requestable only)
+    var myFrags=[];
+    Object.values(state.inventory).forEach(function(sc){
+      (sc.fragments||[]).forEach(function(f){
+        if(f.status==='MISSING'&&f.stars>0&&f.stars<5){
+          myFrags.push({theme:sc.theme,scene:sc.scene_name,position:f.position,stars:f.stars});
+        }
+      });
+    });
+
+    if(!myFrags.length){
+      loadEl.style.display='none';
+      bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--green);font-style:italic;">No requestable missing fragments found.</div>';
+      return;
+    }
+
+    // Find matches
+    var matches=[];
+    members.forEach(function(m){
+      if(m.member_name===state.memberName) return;
+      var sameAlliance=(state.alliance&&m.alliance&&m.alliance.toLowerCase()===state.alliance.toLowerCase());
+      var inv=m.inventory||[];
+      myFrags.forEach(function(frag){
+        var hit=null;
+        inv.forEach(function(sc){
+          if(sc.theme===frag.theme&&sc.scene_name===frag.scene){
+            (sc.fragments||[]).forEach(function(f){
+              if(f.position===frag.position&&f.status==='DUPLICATE') hit=f;
+            });
+          }
+        });
+        if(hit){
+          matches.push({
+            donor:m.member_name,
+            alliance:m.alliance||'',
+            sameAlliance:sameAlliance,
+            theme:frag.theme,scene:frag.scene,
+            position:frag.position,stars:frag.stars,
+            extras:hit.duplicate_count||1
+          });
+        }
+      });
+    });
+
+    loadEl.style.display='none';
+
+    if(!matches.length){
+      bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">No matches found yet. Check back after more alliance members submit their inventory.</div>';
+      return;
+    }
+
+    // Sort: same alliance first, then by scene completion proximity (position order as proxy)
+    matches.sort(function(a,b){
+      if(b.sameAlliance!==a.sameAlliance) return b.sameAlliance?1:-1;
+      if(a.scene!==b.scene) return a.scene.localeCompare(b.scene);
+      return a.position-b.position;
+    });
+
+    // Render grouped by scene
+    var html='<div style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:16px;">Showing matches from State '+state.stateNumber+(state.alliance?' &mdash; same alliance shown first':'')+'.</div>';
+    var currentScene=null;
+    matches.forEach(function(m){
+      var sceneKey=m.theme+' \u203a '+m.scene;
+      if(sceneKey!==currentScene){
+        if(currentScene!==null) html+='</div>';
+        html+='<div style="margin-bottom:12px;">';
+        html+='<div style="font-family:Cinzel,serif;font-size:.75rem;font-weight:700;color:var(--gold-bright);padding:10px 14px;background:var(--surface2);border:1px solid var(--border-bright);border-radius:6px 6px 0 0;">'+sceneKey+'</div>';
+        currentScene=sceneKey;
+      }
+      var allianceBadge=m.sameAlliance
+        ?'<span style="font-size:.6rem;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);margin-left:6px;">same alliance</span>'
+        :'';
+      var starsHtml='<span style="color:var(--gold);letter-spacing:-1px;">'+'★'.repeat(m.stars)+'<span style="opacity:.2">'+'★'.repeat(5-m.stars)+'</span></span>';
+      html+='<div style="background:var(--surface);border:1px solid var(--border);border-top:none;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
+      html+='<div><div style="font-family:Cinzel,serif;font-size:.78rem;color:var(--text);">'+m.donor+allianceBadge+'</div>';
+      html+='<div style="font-size:.74rem;color:var(--text-dim);margin-top:2px;">Fragment #'+m.position+' &bull; '+starsHtml+'</div></div>';
+      html+='<span style="font-size:.72rem;padding:2px 10px;border-radius:999px;background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);">+'+m.extras+' available</span>';
+      html+='</div>';
+    });
+    if(currentScene!==null) html+='</div>';
+    bodyEl.innerHTML=html;
+
+  } catch(e){
+    loadEl.style.display='none';
+    bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--red);font-style:italic;">Failed to load matches: '+e.message+'</div>';
+  }
 }
 
 function renderExport(){
@@ -749,8 +922,18 @@ function esc(str){return str.replace(/'/g,"\\'");}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='setup')doSetup();});
 
 load();
-if(state.memberName)nav('albums');
-else showScreen('setup');
+if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albums[0];
+if(state.memberName){
+  // Existing user missing alliance or state -- prompt profile completion
+  if(!state.alliance||!state.stateNumber){
+    showScreen('profile');
+    renderProfile();
+  } else {
+    nav('albums');
+  }
+} else {
+  showScreen('setup');
+}
 </script>
 </body>
 </html>

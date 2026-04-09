@@ -303,6 +303,8 @@ async function loadData() {
     members = (res.data || []).map(r => ({
       id: r.id,
       name: r.member_name,
+      alliance: r.alliance || '',
+      stateNumber: r.state_number || null,
       submitted_at: r.submitted_at,
       inventory: r.inventory || [],
       color: memberColor(r.member_name)
@@ -361,18 +363,29 @@ function computeMatches() {
       const donors = [];
       members.forEach(mb => {
         if (mb.name === ma.name) return;
+        // Hard block: never cross-state
+        if (ma.stateNumber && mb.stateNumber && ma.stateNumber !== mb.stateNumber) return;
         const hit = (byMember[mb.name] || []).find(f =>
           f.theme === frag.theme && f.scene === frag.scene &&
           f.position === frag.position && f.status === 'DUPLICATE'
         );
-        if (hit) donors.push({ name: mb.name, color: mb.color, extras: hit.duplicate_count });
+        if (hit) {
+          const sameAlliance = ma.alliance && mb.alliance &&
+            ma.alliance.toLowerCase() === mb.alliance.toLowerCase();
+          donors.push({ name: mb.name, color: mb.color, extras: hit.duplicate_count, sameAlliance });
+        }
       });
-      if (donors.length) matches.push({
-        requester: ma.name, requester_color: ma.color,
-        theme: frag.theme, scene: frag.scene,
-        position: frag.position, stars: frag.stars,
-        remaining: remPerScene[frag.scene] || 1, donors
-      });
+      if (donors.length) {
+        // Sort donors: same alliance first
+        donors.sort((a, b) => (b.sameAlliance ? 1 : 0) - (a.sameAlliance ? 1 : 0));
+        matches.push({
+          requester: ma.name, requester_color: ma.color,
+          requester_alliance: ma.alliance, requester_state: ma.stateNumber,
+          theme: frag.theme, scene: frag.scene,
+          position: frag.position, stars: frag.stars,
+          remaining: remPerScene[frag.scene] || 1, donors
+        });
+      }
     });
   });
   matches.sort((a, b) => a.remaining - b.remaining || b.stars - a.stars);
@@ -434,6 +447,8 @@ function renderMembers() {
     const dup  = frags.filter(f => f.status === 'DUPLICATE').length;
     return `<tr>
       <td><span style="display:inline-flex;align-items:center;gap:7px;">${dot(m.color)}${m.name}</span></td>
+      <td style="color:var(--text-mid);font-size:.8rem;">${m.alliance || '<span style="color:var(--text-dim);font-style:italic;">—</span>'}</td>
+      <td style="text-align:center;color:var(--text-mid);font-size:.8rem;">${m.stateNumber || '<span style="color:var(--text-dim);font-style:italic;">—</span>'}</td>
       <td><span class="badge badge-amber">${m.inventory.length} scenes</span></td>
       <td><span class="badge badge-red">${miss} missing</span></td>
       <td><span class="badge badge-blue">${dup} dupes</span></td>
@@ -445,7 +460,7 @@ function renderMembers() {
     </tr>`;
   }).join('');
   el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><thead><tr>'
-    + '<th>Member</th><th>Scenes</th><th>Missing</th><th>Dupes</th><th>Submitted</th><th></th>'
+    + '<th>Member</th><th>Alliance</th><th>State</th><th>Scenes</th><th>Missing</th><th>Dupes</th><th>Submitted</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
@@ -495,7 +510,7 @@ function renderMatches(matches) {
       const donors = m.donors.map(d =>
         `<span class="donor-chip" onclick="copyMsg('${esc(name)}','${esc(m.scene)}',${m.position},${m.stars},'${esc(d.name)}',${d.extras})">
           <span style="width:7px;height:7px;border-radius:50%;background:${d.color};display:inline-block;"></span>
-          ${d.name} <span style="color:var(--blue)">+${d.extras}</span>
+          ${d.name} <span style="color:var(--blue)">+${d.extras}</span>${d.sameAlliance ? '<span style="font-size:.58rem;padding:1px 5px;border-radius:999px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);margin-left:4px;">alliance</span>' : ''}
         </span>`
       ).join('');
       return `<div class="match-row">
@@ -510,7 +525,7 @@ function renderMatches(matches) {
     }).join('');
     return `<div class="match-group">
       <div class="match-hdr"><span class="member-dot" style="background:${grp.color}"></span>
-        ${name} &mdash; ${grp.items.length} match${grp.items.length!==1?'es':''}
+        ${name}${grp.items[0].requester_alliance ? ' &bull; ' + grp.items[0].requester_alliance : ''}${grp.items[0].requester_state ? ' &bull; State ' + grp.items[0].requester_state : ''} &mdash; ${grp.items.length} match${grp.items.length!==1?'es':''}
       </div>${rows}
     </div>`;
   }).join('');
