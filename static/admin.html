@@ -592,16 +592,23 @@ function downloadMember(name) {
 
 async function deleteMember(name, id) {
   if (!confirm('Remove ' + name + '\'s submission?')) return;
+  if (!id) { alert('Cannot delete: missing submission ID. Try refreshing.'); return; }
   const res = await apiFetch('/submissions/' + id, { method: 'DELETE' });
-  if (res.ok) await loadData();
-  else alert('Delete failed: ' + (res.data?.error || res.status));
+  if (res.ok) {
+    await loadData();
+  } else {
+    alert('Delete failed (status ' + res.status + '): ' + JSON.stringify(res.data));
+  }
 }
 
 async function deleteAllSubmissions() {
   if (!confirm('Delete ALL submissions? This cannot be undone.')) return;
   const res = await apiFetch('/submissions', { method: 'DELETE' });
-  if (res.ok) await loadData();
-  else alert('Delete failed: ' + (res.data?.error || res.status));
+  if (res.ok) {
+    await loadData();
+  } else {
+    alert('Delete all failed (status ' + res.status + '): ' + JSON.stringify(res.data));
+  }
 }
 
 // ================================================================
