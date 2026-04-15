@@ -454,14 +454,22 @@ function renderMembers() {
       <td><span class="badge badge-blue">${dup} dupes</span></td>
       <td style="font-size:.76rem;color:var(--text-dim);font-style:italic;">${timeAgo(m.submitted_at)}</td>
       <td>
-        <button class="btn btn-outline btn-sm" onclick="downloadMember('${esc(m.name)}')">&#8595; JSON</button>
-        <button class="btn btn-danger btn-sm" style="margin-left:4px;" onclick="deleteMember('${esc(m.name)}','${m.id}')">&#10005;</button>
+        <button class="btn btn-outline btn-sm dl-btn" data-name="${esc(m.name)}">&#8595; JSON</button>
+        <button class="btn btn-danger btn-sm del-btn" style="margin-left:4px;" data-name="${esc(m.name)}" data-id="${m.id}">&#10005;</button>
       </td>
     </tr>`;
   }).join('');
   el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><thead><tr>'
     + '<th>Member</th><th>Alliance</th><th>State</th><th>Scenes</th><th>Missing</th><th>Dupes</th><th>Submitted</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+  // Attach event listeners after innerHTML render
+  el.querySelectorAll('.dl-btn').forEach(btn => {
+    btn.addEventListener('click', () => downloadMember(btn.dataset.name));
+  });
+  el.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteMember(btn.dataset.name, btn.dataset.id));
+  });
 }
 
 function renderMissing() {
