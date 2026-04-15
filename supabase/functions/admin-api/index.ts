@@ -17,8 +17,15 @@ Deno.serve(async (req: Request) => {
   }
 
   const url    = new URL(req.url);
-  const path   = url.pathname.replace(/^\/admin-api/, '');
+  // Supabase invokes functions at /functions/v1/admin-api/...
+  // Strip everything up to and including the function name
+  const path   = url.pathname.replace(/^.*\/admin-api/, '') || '/';
   const method = req.method;
+
+  // GET /health — no auth required
+  if (path === '/health' || path === '' || path === '/') {
+    return json({ ok: true, path });
+  }
 
   // ----------------------------------------------------------------
   // AUTH CHECK — password sent as x-admin-password header
@@ -74,6 +81,7 @@ Deno.serve(async (req: Request) => {
   // DELETE /submissions/:id — delete single submission
   if (path.startsWith('/submissions/') && method === 'DELETE') {
     const id = path.replace('/submissions/', '');
+    console.log('DELETE submission id:', id);
     const { error } = await db.from('submissions').delete().eq('id', id);
     if (error) return json({ error: error.message }, 500);
     return json({ ok: true });
@@ -81,16 +89,12 @@ Deno.serve(async (req: Request) => {
 
   // DELETE /submissions — delete all submissions
   if (path === '/submissions' && method === 'DELETE') {
+    console.log('DELETE all submissions');
     const { error } = await db
       .from('submissions')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000');
     if (error) return json({ error: error.message }, 500);
-    return json({ ok: true });
-  }
-
-  // GET /health
-  if (path === '/health' && method === 'GET') {
     return json({ ok: true });
   }
 
