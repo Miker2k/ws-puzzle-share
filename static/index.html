@@ -191,7 +191,7 @@ body{
       <div class="breadcrumb" id="breadcrumb"></div>
     </div>
   </div>
-  <button class="export-btn hidden" id="export-top-btn" onclick="goExport()">&#8595; Export</button>
+  <button class="export-btn hidden" id="export-top-btn" onclick="submitToAlliance()">&#9650; Submit</button>
 </header>
 
 <main class="main">
@@ -221,8 +221,7 @@ body{
 
   <div class="screen" id="screen-profile">
     <div class="setup-card" style="margin-top:0;">
-      <div class="setup-logo" style="font-size:1.1rem;">Complete Your Profile</div>
-      <div class="setup-sub">Your Alliance and State number are needed to match you with the right players.</div>
+      <div class="setup-logo" style="font-size:1.1rem;">&#9998; My Profile</div>
       <div style="font-family:'Cinzel',serif;font-size:.72rem;color:var(--text-dim);margin-bottom:16px;">In-game name: <span id="profile-name-display" style="color:var(--gold-bright);"></span></div>
       <label class="field-label" for="profile-alliance-input">Alliance Name</label>
       <input class="text-input" id="profile-alliance-input" type="text" placeholder="e.g. Dark Knights" autocomplete="off" maxlength="40" style="margin-bottom:12px;">
@@ -230,6 +229,20 @@ body{
       <input class="text-input" id="profile-state-input" type="number" placeholder="e.g. 142" min="1" max="9999" style="margin-bottom:4px;">
       <button class="start-btn" onclick="doProfileSave()">Save Profile &#8594;</button>
     </div>
+
+    <div class="export-section-label" style="margin-top:24px;">Share to Discord</div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
+    <div id="copy-confirm-missing" class="copy-confirm"></div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('dupes')" style="margin-top:6px;">&#128203; Copy Duplicates List</button>
+    <div id="copy-confirm-dupes" class="copy-confirm"></div>
+
+    <div class="export-section-label">Data</div>
+    <label class="export-dl-btn restore" for="restore-file-export">
+      &#128196; Restore from Saved JSON
+      <input class="restore-input" type="file" id="restore-file-export" accept=".json" onchange="restoreFromFile(this,'restore-confirm-export')">
+    </label>
+    <div id="restore-confirm-export" class="copy-confirm" style="margin-top:6px;"></div>
+    <button class="export-dl-btn danger" onclick="clearDB()">&#128465; Clear All Saved Data</button>
   </div>
 
   <div class="screen" id="screen-albums">
@@ -276,30 +289,11 @@ body{
 
   <div class="screen" id="screen-export">
     <div class="export-card">
-      <div class="export-title">&#9660; Summary</div>
-      <div class="export-stats" id="export-stats"></div>
-      <div style="font-family:'Cinzel',serif;font-size:.7rem;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Scenes Logged</div>
-      <div class="export-scene-list" id="export-scene-list"></div>
+      <div class="export-title">&#9650; Submitting to Alliance</div>
+      <div id="export-stats"></div>
     </div>
-
-    <div class="export-section-label">Alliance Sync</div>
-    <button class="export-dl-btn" id="submit-btn" onclick="submitToAlliance()" style="background:linear-gradient(135deg,#1a4a8a,#2563eb);box-shadow:0 2px 8px rgba(37,99,235,0.3);">&#9650; Submit Inventory to Alliance</button>
-    <div id="submit-confirm" class="copy-confirm"></div>
-    <div class="export-hint">Submits your current inventory directly to the coordinator. Re-submit any time your fragments change.</div>
-
-    <div class="export-section-label">Share to Discord</div>
-    <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
-    <div id="copy-confirm-missing" class="copy-confirm"></div>
-    <button class="export-dl-btn discord" onclick="copyDiscord('dupes')" style="margin-top:6px;">&#128203; Copy Duplicates List</button>
-    <div id="copy-confirm-dupes" class="copy-confirm"></div>
-
-    <div class="export-section-label">Data</div>
-    <label class="export-dl-btn restore" for="restore-file-export">
-      &#128196; Restore from Saved JSON
-      <input class="restore-input" type="file" id="restore-file-export" accept=".json" onchange="restoreFromFile(this,'restore-confirm-export')">
-    </label>
-    <div id="restore-confirm-export" class="copy-confirm" style="margin-top:6px;"></div>
-    <button class="export-dl-btn danger" onclick="clearDB()">&#128465; Clear All Saved Data</button>
+    <div id="submit-confirm" class="copy-confirm" style="margin-top:8px;"></div>
+    <div id="copy-confirm-json" class="copy-confirm"></div>
   </div>
 </main>
 
@@ -328,22 +322,21 @@ const SUPABASE_URL = 'https://aevurncobtrfutcfufut.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
 
 async function submitToAlliance() {
-  var btn = document.getElementById('submit-btn');
-  var confirmEl = document.getElementById('submit-confirm');
+  var btn = document.getElementById('export-top-btn');
+  var originalText = btn.textContent;
 
   if (!state.memberName) {
-    showConfirm('submit-confirm', false, 'Enter your in-game name before submitting.');
+    alert('Enter your in-game name before submitting.');
     return;
   }
   var scenes = Object.values(state.inventory);
   if (!scenes.length) {
-    showConfirm('submit-confirm', false, 'No scene data to submit yet.');
+    alert('No scene data to submit yet.');
     return;
   }
 
   btn.disabled = true;
   btn.textContent = 'Submitting\u2026';
-  confirmEl.style.display = 'none';
 
   try {
     var payload = {
@@ -366,16 +359,16 @@ async function submitToAlliance() {
     });
 
     if (res.ok) {
-      showConfirm('submit-confirm', true, 'Submitted! Your coordinator can now see your inventory.');
+      btn.textContent = '\u2713 Submitted!';
+      setTimeout(function(){ btn.textContent = originalText; btn.disabled = false; }, 3000);
     } else {
       var err = await res.json().catch(function(){ return {}; });
       throw new Error(err.message || 'HTTP ' + res.status);
     }
   } catch(e) {
-    showConfirm('submit-confirm', false, 'Submission failed: ' + e.message);
-  } finally {
+    alert('Submission failed: ' + e.message);
     btn.disabled = false;
-    btn.textContent = '\u25b2 Submit Inventory to Alliance';
+    btn.textContent = originalText;
   }
 }
 
@@ -393,7 +386,7 @@ function showScreen(name){
   document.getElementById('progress-sticky').style.display=name==='fragments'?'block':'none';
   document.getElementById('back-btn').classList.toggle('hidden',name==='setup'||name==='profile'||name==='albums');
   const hasData=Object.keys(state.inventory).length>0;
-  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||name==='profile'||!hasData);
+  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||name==='profile'||name==='export'||!hasData);
   updateHeader(name);
 }
 
@@ -414,7 +407,6 @@ function goBack(){
   if(s==='themes')nav('albums');
   else if(s==='scenes')nav('themes');
   else if(s==='fragments')nav('scenes');
-  else if(s==='export')nav('albums');
   else if(s==='matches')nav('albums');
   else if(s==='profile')nav('albums');
 }
