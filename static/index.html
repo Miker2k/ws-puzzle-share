@@ -484,8 +484,8 @@ function renderThemes(){
     const allScenes=KNOWN.scenes[t]||[];
     const logged=allScenes.filter(function(s){return !!state.inventory[sceneKey(state.album,t,s)];}).length;
     const done=allScenes.filter(function(s){const k=sceneKey(state.album,t,s);return state.inventory[k]&&state.inventory[k].completed;}).length;
-    const pillClass=done===allScenes.length&&allScenes.length>0?'pill-done':done>0?'pill-partial':'pill-new';
-    const pillText=done===allScenes.length&&allScenes.length>0?'Complete':done+'/'+allScenes.length;
+    const pillClass=done===allScenes.length&&allScenes.length>0?'pill-done':logged>0?'pill-partial':'pill-new';
+    const pillText=done===allScenes.length&&allScenes.length>0?'Complete':logged+'/'+allScenes.length;
     return '<div class="list-item" onclick="selectTheme(\''+esc(t)+'\')"><div><div class="list-item-name">'+t+'</div><div class="list-item-meta">'+allScenes.length+' scenes</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
   }).join('');
 }
