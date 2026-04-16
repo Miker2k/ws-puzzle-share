@@ -98,6 +98,67 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true });
   }
 
+  // ----------------------------------------------------------------
+  // CORRECTIONS
+  // ----------------------------------------------------------------
+
+  // GET /corrections — all corrections
+  if (path === '/corrections' && method === 'GET') {
+    const { data, error } = await db.from('corrections').select('*').order('created_at', { ascending: true });
+    if (error) return json({ error: error.message }, 500);
+    return json(data || []);
+  }
+
+  // POST /corrections — add a correction
+  if (path === '/corrections' && method === 'POST') {
+    const body = await req.json().catch(() => ({}));
+    const { type, theme, old_name, new_name } = body;
+    if (!type || !theme || !old_name || !new_name) return json({ error: 'Missing required fields' }, 400);
+    if (old_name.trim() === new_name.trim()) return json({ error: 'Old and new names are the same' }, 400);
+    const { data, error } = await db.from('corrections').insert({ type, theme, old_name: old_name.trim(), new_name: new_name.trim() }).select().single();
+    if (error) return json({ error: error.message }, 500);
+    return json(data);
+  }
+
+  // DELETE /corrections/:id — remove a correction
+  if (path.startsWith('/corrections/') && method === 'DELETE') {
+    const id = path.replace('/corrections/', '');
+    const { error } = await db.from('corrections').delete().eq('id', id);
+    if (error) return json({ error: error.message }, 500);
+    return json({ ok: true });
+  }
+
+  // ----------------------------------------------------------------
+  // CATALOG OVERRIDES (scene ordering)
+  // ----------------------------------------------------------------
+
+  // GET /catalog — all overrides
+  if (path === '/catalog' && method === 'GET') {
+    const { data, error } = await db.from('catalog_overrides').select('*');
+    if (error) return json({ error: error.message }, 500);
+    return json(data || []);
+  }
+
+  // POST /catalog — upsert scene order for a theme
+  if (path === '/catalog' && method === 'POST') {
+    const body = await req.json().catch(() => ({}));
+    const { theme, scene_order } = body;
+    if (!theme || !Array.isArray(scene_order)) return json({ error: 'Missing theme or scene_order' }, 400);
+    const { data, error } = await db.from('catalog_overrides')
+      .upsert({ theme, scene_order, updated_at: new Date().toISOString() }, { onConflict: 'theme' })
+      .select().single();
+    if (error) return json({ error: error.message }, 500);
+    return json(data);
+  }
+
+  // DELETE /catalog/:theme — remove override for a theme
+  if (path.startsWith('/catalog/') && method === 'DELETE') {
+    const theme = decodeURIComponent(path.replace('/catalog/', ''));
+    const { error } = await db.from('catalog_overrides').delete().eq('theme', theme);
+    if (error) return json({ error: error.message }, 500);
+    return json({ ok: true });
+  }
+
   return json({ error: 'Not found' }, 404);
 });
 
