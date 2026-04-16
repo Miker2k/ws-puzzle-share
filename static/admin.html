@@ -828,7 +828,7 @@ const THEME_SCENES = {
 
 function initCorrectionForm() {
   const themeEl = document.getElementById('corr-theme');
-  themeEl.innerHTML = ALL_THEMES.map(t => `<option value="${esc(t)}">${t}</option>`).join('');
+  themeEl.innerHTML = ALL_THEMES.map(t => `<option value="${escHTML(t)}">${t}</option>`).join('');
   corrThemeChanged();
 }
 
@@ -958,7 +958,7 @@ function renderThemeList() {
   const themes = catalogOverrides[THEME_ORDER_KEY] || ALL_THEMES;
   const el = document.getElementById('catalog-theme-list');
   el.innerHTML = themes.map((t, i) => `
-    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${esc(t)}">
+    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${escHTML(t)}">
       <span class="drag-handle">&#8942;&#8942;</span>
       <span class="drag-label">${t}</span>
     </div>`).join('');
@@ -998,7 +998,7 @@ function loadThemeForReorder(theme) {
   const scenes = catalogOverrides[theme] || THEME_SCENES[theme] || [];
   const el = document.getElementById('catalog-scene-list');
   el.innerHTML = scenes.map((s, i) => `
-    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${esc(s)}">
+    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${escHTML(s)}">
       <span class="drag-handle">&#8942;&#8942;</span>
       <span class="drag-label">${s}</span>
     </div>`).join('');
