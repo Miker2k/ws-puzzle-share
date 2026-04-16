@@ -237,6 +237,7 @@ body{
     <div id="copy-confirm-dupes" class="copy-confirm"></div>
 
     <div class="export-section-label">Data</div>
+    <button class="export-dl-btn" onclick="downloadJSON()" style="margin-bottom:6px;">&#8595; Download Inventory Backup</button>
     <label class="export-dl-btn restore" for="restore-file-export">
       &#128196; Restore from Saved JSON
       <input class="restore-input" type="file" id="restore-file-export" accept=".json" onchange="restoreFromFile(this,'restore-confirm-export')">
