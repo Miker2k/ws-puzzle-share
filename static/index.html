@@ -998,19 +998,84 @@ function esc(str){return str.replace(/'/g,"\\'");}
 
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='setup')doSetup();});
 
+// ================================================================
+// CATALOG OVERRIDES + CORRECTIONS (fetched from Supabase on load)
+// ================================================================
+async function fetchCatalogOverrides() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/catalog_overrides?select=theme,scene_order', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+    });
+    if (!res.ok) return;
+    var rows = await res.json();
+    rows.forEach(function(r) {
+      if (KNOWN.scenes[r.theme] && Array.isArray(r.scene_order)) {
+        KNOWN.scenes[r.theme] = r.scene_order;
+      }
+    });
+  } catch(e) { /* non-fatal -- fall back to default order */ }
+}
+
+async function fetchCorrections() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/corrections?select=type,theme,old_name,new_name', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+    });
+    if (!res.ok) return;
+    var rows = await res.json();
+    rows.forEach(function(c) {
+      if (c.type === 'scene') {
+        // Add to SCENE_ALIASES using theme|||old_name key
+        SCENE_ALIASES[c.theme + '|||' + c.old_name] = c.new_name;
+        // Also update KNOWN.scenes display name
+        if (KNOWN.scenes[c.theme]) {
+          KNOWN.scenes[c.theme] = KNOWN.scenes[c.theme].map(function(s) {
+            return s === c.old_name ? c.new_name : s;
+          });
+        }
+        // Update FRAGMENTS key
+        if (FRAGMENTS[c.theme] && FRAGMENTS[c.theme][c.old_name]) {
+          FRAGMENTS[c.theme][c.new_name] = FRAGMENTS[c.theme][c.old_name];
+          delete FRAGMENTS[c.theme][c.old_name];
+        }
+      } else if (c.type === 'theme') {
+        // Rename theme in KNOWN
+        if (KNOWN.themes[KNOWN.albums[0]]) {
+          KNOWN.themes[KNOWN.albums[0]] = KNOWN.themes[KNOWN.albums[0]].map(function(t) {
+            return t === c.old_name ? c.new_name : t;
+          });
+        }
+        if (KNOWN.scenes[c.old_name]) {
+          KNOWN.scenes[c.new_name] = KNOWN.scenes[c.old_name];
+          delete KNOWN.scenes[c.old_name];
+        }
+        if (FRAGMENTS[c.old_name]) {
+          FRAGMENTS[c.new_name] = FRAGMENTS[c.old_name];
+          delete FRAGMENTS[c.old_name];
+        }
+        // Add theme alias for matching
+        SCENE_ALIASES['__theme|||' + c.old_name] = c.new_name;
+      }
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
 load();
 if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albums[0];
-if(state.memberName){
-  // Existing user missing alliance or state -- prompt profile completion
-  if(!state.alliance||!state.stateNumber){
-    showScreen('profile');
-    renderProfile();
+
+// Fetch overrides then navigate
+Promise.all([fetchCatalogOverrides(), fetchCorrections()]).then(function() {
+  if(state.memberName){
+    if(!state.alliance||!state.stateNumber){
+      showScreen('profile');
+      renderProfile();
+    } else {
+      nav('albums');
+    }
   } else {
-    nav('albums');
+    nav('setup');
   }
-} else {
-  showScreen('setup');
-}
+});
 </script>
 </body>
 </html>

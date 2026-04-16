@@ -175,6 +175,8 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
       <div class="tab" data-tab="missing"   onclick="switchTab('missing')">Missing</div>
       <div class="tab" data-tab="dupes"     onclick="switchTab('dupes')">Duplicates</div>
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">Broadcast</div>
+      <div class="tab" data-tab="corrections" onclick="switchTab('corrections');loadCorrections()">Corrections</div>
+      <div class="tab" data-tab="catalog" onclick="switchTab('catalog');loadCatalog()">Scene Order</div>
     </div>
 
     <div class="tab-content active" id="tab-members">
@@ -219,6 +221,52 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
       <button class="btn btn-gold" onclick="generateBroadcast()">&#9889; Generate Broadcast</button>
       <div id="broadcast-container"></div>
     </div>
+
+    <div class="tab-content" id="tab-corrections">
+      <div class="section-hdr">Name Corrections</div>
+      <p class="section-sub">Fix spelling or punctuation errors in theme and scene names. Corrections apply to the matching engine immediately. Existing submissions are not modified &mdash; run the SQL migration when ready.</p>
+      <div style="background:var(--surface);border:1px solid var(--border-bright);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Type</label>
+            <select id="corr-type" onchange="corrTypeChanged()" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;">
+              <option value="theme">Theme</option>
+              <option value="scene">Scene</option>
+            </select>
+          </div>
+          <div id="corr-theme-wrap">
+            <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Theme</label>
+            <select id="corr-theme" onchange="corrThemeChanged()" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;"></select>
+          </div>
+        </div>
+        <div id="corr-scene-row" style="display:none;margin-bottom:10px;">
+          <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Scene</label>
+          <select id="corr-scene" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;"></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:flex-end;">
+          <div>
+            <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Corrected Name</label>
+            <input id="corr-new-name" type="text" placeholder="Enter corrected name\u2026" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;">
+          </div>
+          <button class="btn btn-gold" onclick="addCorrection()" style="white-space:nowrap;height:36px;">Add Correction</button>
+        </div>
+        <div id="corr-feedback" style="margin-top:8px;font-size:.78rem;font-style:italic;display:none;"></div>
+      </div>
+      <div id="corrections-list"><div class="loading">Loading\u2026</div></div>
+    </div>
+
+    <div class="tab-content" id="tab-catalog">
+      <div class="section-hdr">Scene Order</div>
+      <p class="section-sub">Drag scenes within a theme to reorder them. Changes are saved to Supabase and applied to the member app immediately. The original order from the catalog is used as the default.</p>
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <select id="catalog-theme-select" onchange="loadThemeForReorder(this.value)" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;flex:1;min-width:200px;"></select>
+        <button class="btn btn-gold" onclick="saveCatalogOrder()">&#10003; Save Order</button>
+        <button class="btn btn-danger" onclick="resetCatalogOrder()">&#8635; Reset to Default</button>
+      </div>
+      <div id="catalog-feedback" style="font-size:.78rem;font-style:italic;margin-bottom:10px;display:none;"></div>
+      <div id="catalog-scene-list"></div>
+    </div>
+
   </main>
 </div>
 
@@ -651,6 +699,210 @@ function legacyCopy(text, cb) {
 // INIT
 // ================================================================
 if (sessionStorage.getItem(SESSION_KEY)) showDashboard();
+
+// ================================================================
+// CORRECTIONS
+// ================================================================
+let corrections = [];
+
+// Populate theme dropdown from KNOWN catalog embedded in index.html
+// We hardcode the theme list here since admin has no access to index.html KNOWN object
+const ALL_THEMES = [
+  'Battlefield Epic','Spectacular Adventures','Divine Weapons','The Labyrinth',
+  "Nature's Strength",'Crystalline Mysteries','Ballad of Wind and Cold','Infernal Power',
+  'Kings of Combat','Prerogative of the Flame','Frostdragon Empire','Rekindled Flames',
+  'Song of Heroes','Explore the World','Daybreak Island','Tundra Alliance'
+];
+
+const THEME_SCENES = {
+  'Battlefield Epic':['Imperial Foundry','King of the Battlefield','Orichalcum','City of Kings',"Pilot's Paradise",'Great Contest','Canyon Clash',"Hero's Glory",'Grand Banquet'],
+  'Spectacular Adventures':['Fishing Tournament','Snowbusters','Bandit','Red Haired Joe','A Queen Arises','The Eagles','Bounty Hunter','Wandering Merchant','Tundra Adventure'],
+  'Divine Weapons':['Master Blacksmith','Legendary Divine Weapon','Tundra Trade Route','Merchant Escort','Cryptid Invasion','Steam Rhapsody','Ice Journey','Exotic Charm','Essence Stones'],
+  'The Labyrinth':['Underworld Mysteries','The World Below','Digging to Danger','Fungal Forest','Furnace of the Gods','The Undergrounders','The Project',"Gaia's Heart",'The Deepest Echo'],
+  "Nature's Strength":['Friend of Nature','Wild at Heart','Beast Unleashed','Wild Legion','Pets in Arms','Master Tamer','Superhuman Strength',"Kasia's Struggle",'Call of the Wild'],
+  'Crystalline Mysteries':['Fiery Crystal','Mining the Fire','Heirs of Empire','Sins of Empire','Fire Reborn','The Burning Legion','Promises of Fire','Crystalline Rage','Fire Crystal Era'],
+  'Ballad of Wind and Cold':['Honor and Glory','Cold Highways','Words of the Forgotten','Monument to the Flame','Alliance Showdown','State Versus State','The Summit of Battle','Castle of Conflict','Frostwind Track'],
+  'Infernal Power':['Helios Warriors','Crystal Strength','Crystal Fragmentation','Miner Madness','Engine of the Future','Risky Business','Treasure of Empire','The Communicative Heart','The Guardians'],
+  'Kings of Combat':['League of Honor','A Tournament of Heroes','Duel of Greatness','The Callisto','Kings of Combat','The Arena Gamers','The Helios Cannon','Behemoth','And the Bell Tolls'],
+  'Prerogative of the Flame':['Whispers of the World','Temptations of Power','Doomsday Man','The Hunters','The Mad King','The Last Empress','The Last Collapse','A Long Slumber','Sky City'],
+  'Frostdragon Empire':['Frostdragon Empire','The Dragonic Legend','Wings of Empire','The Dragonic Legion','Rediscovery','Future Vision','War and Wealth','Banquet for a King','A Tyrant Crowned'],
+  'Rekindled Flames':['Furnace','City Founding','Dawn Alliance','Decisions','Menace Afoot','Heroes','Food Power','A New Order','True Explorer'],
+  'Song of Heroes':['Dauntless Heroes','Snow Angel','Everyday Champions',"Arcadia's Legacy",'I Am the Fire','Artisan Architect','Life Vs Death','The Ice Breakers','Epic of a New World'],
+  'Explore the World':['War on Winter','Exploration Journal','Hunting Guild','The Raging Bear','Treasure Kingdom','Wealth is Knowledge','Ruins of Old','Cryptid Days','Call of the Stars'],
+  'Daybreak Island':['Daybreak Island Legend','Island of Dreams','Tree of Life','Call of the Sea','Distant Resonance','Caravan Visit','New Home','Daybreak Song','Island Splendors'],
+  'Tundra Alliance':['Alliance Building','One Heart','Heroes Aid','Alliance Resources','Twisted Obsession','Virtues and Crimes','Children of the New World','Horn of Command','Battlefield Epic']
+};
+
+function initCorrectionForm() {
+  const themeEl = document.getElementById('corr-theme');
+  themeEl.innerHTML = ALL_THEMES.map(t => `<option value="${esc(t)}">${t}</option>`).join('');
+  corrThemeChanged();
+}
+
+function corrTypeChanged() {
+  const type = document.getElementById('corr-type').value;
+  document.getElementById('corr-scene-row').style.display = type === 'scene' ? 'block' : 'none';
+  const themeWrap = document.getElementById('corr-theme-wrap');
+  themeWrap.querySelector('label').textContent = type === 'theme' ? 'Theme to Correct' : 'Theme';
+}
+
+function corrThemeChanged() {
+  const theme = document.getElementById('corr-theme').value;
+  const scenes = THEME_SCENES[theme] || [];
+  document.getElementById('corr-scene').innerHTML = scenes.map(s => `<option value="${esc(s)}">${s}</option>`).join('');
+}
+
+async function loadCorrections() {
+  const el = document.getElementById('corrections-list');
+  el.innerHTML = '<div class="loading">Loading\u2026</div>';
+  const res = await apiFetch('/corrections');
+  corrections = res.ok ? (res.data || []) : [];
+  renderCorrections();
+  initCorrectionForm();
+}
+
+function renderCorrections() {
+  const el = document.getElementById('corrections-list');
+  if (!corrections.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-dim);font-style:italic;">No corrections defined yet.</div>';
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Type</th><th>Theme</th><th>Old Name</th><th>New Name</th><th></th></tr></thead>
+    <tbody>${corrections.map(c => `<tr>
+      <td><span class="badge ${c.type==='theme'?'badge-amber':'badge-blue'}">${c.type}</span></td>
+      <td style="color:var(--text-mid)">${c.theme}</td>
+      <td style="color:var(--red);text-decoration:line-through">${c.old_name}</td>
+      <td style="color:var(--green)">${c.new_name}</td>
+      <td><button class="btn btn-danger btn-sm" data-id="${c.id}" data-action="del-correction">&#10005;</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+
+  el.querySelectorAll('[data-action="del-correction"]').forEach(btn => {
+    btn.addEventListener('click', () => deleteCorrection(btn.dataset.id));
+  });
+}
+
+async function addCorrection() {
+  const type = document.getElementById('corr-type').value;
+  const theme = document.getElementById('corr-theme').value;
+  const oldName = type === 'scene'
+    ? document.getElementById('corr-scene').value
+    : theme;
+  const newName = document.getElementById('corr-new-name').value.trim();
+  const fb = document.getElementById('corr-feedback');
+
+  if (!newName) { showFeedback(fb, 'Enter the corrected name.', false); return; }
+  if (oldName === newName) { showFeedback(fb, 'Old and new names are the same.', false); return; }
+
+  const res = await apiFetch('/corrections', {
+    method: 'POST',
+    body: { type, theme, old_name: oldName, new_name: newName }
+  });
+  if (res.ok) {
+    document.getElementById('corr-new-name').value = '';
+    showFeedback(fb, 'Correction saved.', true);
+    await loadCorrections();
+  } else {
+    showFeedback(fb, 'Failed: ' + (res.data?.error || res.status), false);
+  }
+}
+
+async function deleteCorrection(id) {
+  if (!confirm('Remove this correction?')) return;
+  const res = await apiFetch('/corrections/' + id, { method: 'DELETE' });
+  if (res.ok) await loadCorrections();
+}
+
+function showFeedback(el, msg, ok) {
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ================================================================
+// CATALOG / SCENE REORDERING
+// ================================================================
+let catalogOverrides = {};
+let dragSrc = null;
+
+async function loadCatalog() {
+  // Populate theme selector
+  const sel = document.getElementById('catalog-theme-select');
+  if (!sel.options.length) {
+    sel.innerHTML = ALL_THEMES.map(t => `<option value="${esc(t)}">${t}</option>`).join('');
+  }
+  // Fetch saved overrides
+  const res = await apiFetch('/catalog');
+  if (res.ok) {
+    catalogOverrides = {};
+    (res.data || []).forEach(r => { catalogOverrides[r.theme] = r.scene_order; });
+  }
+  loadThemeForReorder(sel.value);
+}
+
+function loadThemeForReorder(theme) {
+  if (!theme) return;
+  const scenes = catalogOverrides[theme] || THEME_SCENES[theme] || [];
+  const el = document.getElementById('catalog-scene-list');
+  el.innerHTML = scenes.map((s, i) => `
+    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${esc(s)}">
+      <span class="drag-handle">&#8942;&#8942;</span>
+      <span class="drag-label">${s}</span>
+      ${catalogOverrides[theme] ? '' : ''}
+    </div>`).join('');
+  el.querySelectorAll('.drag-row').forEach(row => {
+    row.addEventListener('dragstart', e => { dragSrc = row; row.style.opacity = '.4'; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragend', () => { row.style.opacity = '1'; el.querySelectorAll('.drag-row').forEach(r => r.classList.remove('drag-over')); });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if (dragSrc === row) return;
+      const allRows = [...el.querySelectorAll('.drag-row')];
+      const srcIdx = allRows.indexOf(dragSrc);
+      const tgtIdx = allRows.indexOf(row);
+      if (srcIdx < tgtIdx) row.after(dragSrc); else row.before(dragSrc);
+    });
+  });
+}
+
+async function saveCatalogOrder() {
+  const theme = document.getElementById('catalog-theme-select').value;
+  const rows = document.querySelectorAll('#catalog-scene-list .drag-row');
+  const scene_order = [...rows].map(r => r.dataset.scene);
+  const fb = document.getElementById('catalog-feedback');
+  const res = await apiFetch('/catalog', { method: 'POST', body: { theme, scene_order } });
+  if (res.ok) {
+    catalogOverrides[theme] = scene_order;
+    showFeedback(fb, 'Order saved. Members will see the new order on next page load.', true);
+  } else {
+    showFeedback(fb, 'Save failed: ' + (res.data?.error || res.status), false);
+  }
+}
+
+async function resetCatalogOrder() {
+  const theme = document.getElementById('catalog-theme-select').value;
+  if (!confirm('Reset "' + theme + '" to the default scene order?')) return;
+  const fb = document.getElementById('catalog-feedback');
+  const res = await apiFetch('/catalog/' + encodeURIComponent(theme), { method: 'DELETE' });
+  if (res.ok) {
+    delete catalogOverrides[theme];
+    loadThemeForReorder(theme);
+    showFeedback(fb, 'Reset to default order.', true);
+  } else {
+    showFeedback(fb, 'Reset failed: ' + (res.data?.error || res.status), false);
+  }
+}
 </script>
+
+<style>
+.drag-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;cursor:grab;transition:background .1s;}
+.drag-row.drag-over{background:var(--surface3);border-color:var(--gold-dim);}
+.drag-handle{color:var(--text-dim);font-size:1rem;cursor:grab;letter-spacing:-2px;flex-shrink:0;}
+.drag-label{font-family:'Cinzel',serif;font-size:.78rem;font-weight:600;color:var(--text);}
+</style>
 </body>
 </html>
