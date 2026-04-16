@@ -1009,13 +1009,17 @@ async function fetchCatalogOverrides() {
     if (!res.ok) return;
     var rows = await res.json();
     rows.forEach(function(r) {
-      if (r.theme === '__album_order' && Array.isArray(r.scene_order)) {
-        KNOWN.albums = r.scene_order;
-      } else if (r.theme.indexOf('__theme_order_') === 0 && Array.isArray(r.scene_order)) {
+      // Clean any JS-escaped apostrophes that may have been stored incorrectly
+      var clean = (Array.isArray(r.scene_order) ? r.scene_order : []).map(function(s) {
+        return typeof s === 'string' ? s.replace(/\\'/g, "'") : s;
+      });
+      if (r.theme === '__album_order') {
+        KNOWN.albums = clean;
+      } else if (r.theme.indexOf('__theme_order_') === 0) {
         var album = r.theme.replace('__theme_order_', '');
-        if (KNOWN.themes[album]) KNOWN.themes[album] = r.scene_order;
-      } else if (KNOWN.scenes[r.theme] && Array.isArray(r.scene_order)) {
-        KNOWN.scenes[r.theme] = r.scene_order;
+        if (KNOWN.themes[album]) KNOWN.themes[album] = clean;
+      } else if (KNOWN.scenes[r.theme]) {
+        KNOWN.scenes[r.theme] = clean;
       }
     });
   } catch(e) { /* non-fatal -- fall back to default order */ }
