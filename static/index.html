@@ -1009,7 +1009,12 @@ async function fetchCatalogOverrides() {
     if (!res.ok) return;
     var rows = await res.json();
     rows.forEach(function(r) {
-      if (KNOWN.scenes[r.theme] && Array.isArray(r.scene_order)) {
+      if (r.theme === '__album_order' && Array.isArray(r.scene_order)) {
+        KNOWN.albums = r.scene_order;
+      } else if (r.theme.indexOf('__theme_order_') === 0 && Array.isArray(r.scene_order)) {
+        var album = r.theme.replace('__theme_order_', '');
+        if (KNOWN.themes[album]) KNOWN.themes[album] = r.scene_order;
+      } else if (KNOWN.scenes[r.theme] && Array.isArray(r.scene_order)) {
         KNOWN.scenes[r.theme] = r.scene_order;
       }
     });

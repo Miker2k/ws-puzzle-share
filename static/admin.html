@@ -256,15 +256,29 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
     </div>
 
     <div class="tab-content" id="tab-catalog">
-      <div class="section-hdr">Scene Order</div>
-      <p class="section-sub">Drag scenes within a theme to reorder them. Changes are saved to Supabase and applied to the member app immediately. The original order from the catalog is used as the default.</p>
-      <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <select id="catalog-theme-select" onchange="loadThemeForReorder(this.value)" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;flex:1;min-width:200px;"></select>
-        <button class="btn btn-gold" onclick="saveCatalogOrder()">&#10003; Save Order</button>
-        <button class="btn btn-danger" onclick="resetCatalogOrder()">&#8635; Reset to Default</button>
+      <div class="section-hdr">Theme &amp; Scene Order</div>
+      <p class="section-sub">Drag to reorder themes within an album, or scenes within a theme. Changes save to Supabase and apply to the member app on next load.</p>
+
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Theme Order</div>
+        <div id="catalog-theme-list" style="margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-gold btn-sm" onclick="saveThemeOrder()">&#10003; Save Theme Order</button>
+          <button class="btn btn-danger btn-sm" onclick="resetThemeOrder()">&#8635; Reset</button>
+        </div>
+        <div id="theme-order-feedback" style="font-size:.78rem;font-style:italic;margin-top:8px;display:none;"></div>
       </div>
-      <div id="catalog-feedback" style="font-size:.78rem;font-style:italic;margin-bottom:10px;display:none;"></div>
-      <div id="catalog-scene-list"></div>
+
+      <div style="border-top:1px solid var(--border);padding-top:20px;">
+        <div style="font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Scene Order</div>
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <select id="catalog-theme-select" onchange="loadThemeForReorder(this.value)" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;flex:1;min-width:200px;"></select>
+          <button class="btn btn-gold btn-sm" onclick="saveCatalogOrder()">&#10003; Save Scene Order</button>
+          <button class="btn btn-danger btn-sm" onclick="resetCatalogOrder()">&#8635; Reset</button>
+        </div>
+        <div id="catalog-feedback" style="font-size:.78rem;font-style:italic;margin-bottom:10px;display:none;"></div>
+        <div id="catalog-scene-list"></div>
+      </div>
     </div>
 
   </main>
@@ -906,19 +920,77 @@ function showFeedback(el, msg, ok) {
 let catalogOverrides = {};
 let dragSrc = null;
 
+const DEFAULT_ALBUMS = ['Tundra Album'];
+
+function makeDraggable(containerEl) {
+  containerEl.querySelectorAll('.drag-row').forEach(row => {
+    row.addEventListener('dragstart', e => { dragSrc = row; row.style.opacity = '.4'; e.dataTransfer.effectAllowed = 'move'; });
+    row.addEventListener('dragend', () => { row.style.opacity = '1'; containerEl.querySelectorAll('.drag-row').forEach(r => r.classList.remove('drag-over')); });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('drag-over'); });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault(); row.classList.remove('drag-over');
+      if (dragSrc === row) return;
+      const allRows = [...containerEl.querySelectorAll('.drag-row')];
+      const srcIdx = allRows.indexOf(dragSrc);
+      const tgtIdx = allRows.indexOf(row);
+      if (srcIdx < tgtIdx) row.after(dragSrc); else row.before(dragSrc);
+    });
+  });
+}
+
 async function loadCatalog() {
-  // Populate theme selector
   const sel = document.getElementById('catalog-theme-select');
   if (!sel.options.length) {
     sel.innerHTML = ALL_THEMES.map(t => `<option value="${esc(t)}">${t}</option>`).join('');
   }
-  // Fetch saved overrides
   const res = await apiFetch('/catalog');
   if (res.ok) {
     catalogOverrides = {};
     (res.data || []).forEach(r => { catalogOverrides[r.theme] = r.scene_order; });
   }
+  renderThemeList();
   loadThemeForReorder(sel.value);
+}
+
+function renderThemeList() {
+  const THEME_ORDER_KEY = '__theme_order_Tundra Album';
+  const themes = catalogOverrides[THEME_ORDER_KEY] || ALL_THEMES;
+  const el = document.getElementById('catalog-theme-list');
+  el.innerHTML = themes.map((t, i) => `
+    <div class="drag-row" draggable="true" data-index="${i}" data-scene="${esc(t)}">
+      <span class="drag-handle">&#8942;&#8942;</span>
+      <span class="drag-label">${t}</span>
+    </div>`).join('');
+  makeDraggable(el);
+}
+
+async function saveThemeOrder() {
+  const rows = document.querySelectorAll('#catalog-theme-list .drag-row');
+  const theme_order = [...rows].map(r => r.dataset.scene);
+  const THEME_ORDER_KEY = '__theme_order_Tundra Album';
+  const fb = document.getElementById('theme-order-feedback');
+  const res = await apiFetch('/catalog', { method: 'POST', body: { theme: THEME_ORDER_KEY, scene_order: theme_order } });
+  if (res.ok) {
+    catalogOverrides[THEME_ORDER_KEY] = theme_order;
+    showFeedback(fb, 'Theme order saved.', true);
+  } else {
+    showFeedback(fb, 'Save failed: ' + (res.data?.error || res.status), false);
+  }
+}
+
+async function resetThemeOrder() {
+  if (!confirm('Reset theme order to default?')) return;
+  const THEME_ORDER_KEY = '__theme_order_Tundra Album';
+  const fb = document.getElementById('theme-order-feedback');
+  const res = await apiFetch('/catalog/' + encodeURIComponent(THEME_ORDER_KEY), { method: 'DELETE' });
+  if (res.ok) {
+    delete catalogOverrides[THEME_ORDER_KEY];
+    renderThemeList();
+    showFeedback(fb, 'Reset to default theme order.', true);
+  } else {
+    showFeedback(fb, 'Reset failed: ' + (res.data?.error || res.status), false);
+  }
 }
 
 function loadThemeForReorder(theme) {
@@ -929,23 +1001,8 @@ function loadThemeForReorder(theme) {
     <div class="drag-row" draggable="true" data-index="${i}" data-scene="${esc(s)}">
       <span class="drag-handle">&#8942;&#8942;</span>
       <span class="drag-label">${s}</span>
-      ${catalogOverrides[theme] ? '' : ''}
     </div>`).join('');
-  el.querySelectorAll('.drag-row').forEach(row => {
-    row.addEventListener('dragstart', e => { dragSrc = row; row.style.opacity = '.4'; e.dataTransfer.effectAllowed = 'move'; });
-    row.addEventListener('dragend', () => { row.style.opacity = '1'; el.querySelectorAll('.drag-row').forEach(r => r.classList.remove('drag-over')); });
-    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('drag-over'); });
-    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-    row.addEventListener('drop', e => {
-      e.preventDefault();
-      row.classList.remove('drag-over');
-      if (dragSrc === row) return;
-      const allRows = [...el.querySelectorAll('.drag-row')];
-      const srcIdx = allRows.indexOf(dragSrc);
-      const tgtIdx = allRows.indexOf(row);
-      if (srcIdx < tgtIdx) row.after(dragSrc); else row.before(dragSrc);
-    });
-  });
+  makeDraggable(el);
 }
 
 async function saveCatalogOrder() {
