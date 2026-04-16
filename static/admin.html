@@ -534,8 +534,8 @@ function timeAgo(iso) {
   const m = Math.floor(diff/60000), h = Math.floor(m/60), d = Math.floor(h/24);
   return d > 0 ? d+'d ago' : h > 0 ? h+'h ago' : m > 0 ? m+'m ago' : 'just now';
 }
-function esc(s) { return s.replace(/'/g,"\\'"); }
-function escHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/'/g,"\\'"); }
+function escHTML(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderAll() {
   renderStats();
@@ -578,7 +578,7 @@ function renderMembers() {
       <td><span class="badge badge-blue">${dup} dupes</span></td>
       <td style="font-size:.76rem;color:var(--text-dim);font-style:italic;">${timeAgo(m.submitted_at)}</td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-outline btn-sm edit-btn" data-id="${m.id}" data-name="${esc(m.name)}" data-alliance="${esc(m.alliance||'')}" data-state="${esc(m.stateNumber||'')}">&#9998; Edit</button>
+        <button class="btn btn-outline btn-sm edit-btn" data-id="${m.id}" data-name="${esc(m.name||'')}" data-alliance="${esc(m.alliance||'')}" data-state="${esc(String(m.stateNumber||''))}">&#9998; Edit</button>
         <button class="btn btn-outline btn-sm dl-btn" data-name="${esc(m.name)}" style="margin-left:4px;">&#8595; JSON</button>
         <button class="btn btn-danger btn-sm del-btn" style="margin-left:4px;" data-name="${esc(m.name)}" data-id="${m.id}">&#10005;</button>
       </td>
