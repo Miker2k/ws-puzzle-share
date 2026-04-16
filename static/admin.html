@@ -235,20 +235,29 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
             </select>
           </div>
           <div id="corr-theme-wrap">
-            <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Theme</label>
+            <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;" id="corr-theme-label">Theme (correct name)</label>
             <select id="corr-theme" onchange="corrThemeChanged()" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;"></select>
           </div>
         </div>
+        <!-- Theme type: free-text old name field -->
+        <div id="corr-theme-oldname-row" style="display:none;margin-bottom:10px;">
+          <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Incorrect Theme Name (as entered by members)</label>
+          <input id="corr-theme-old" type="text" placeholder="e.g. Frost Dragon Empire" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;">
+        </div>
+        <!-- Scene type: scene dropdown -->
         <div id="corr-scene-row" style="display:none;margin-bottom:10px;">
-          <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Scene</label>
+          <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Scene (incorrect name)</label>
           <select id="corr-scene" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;"></select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:flex-end;">
+        <div id="corr-newname-row" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:flex-end;">
           <div>
             <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Corrected Name</label>
             <input id="corr-new-name" type="text" placeholder="Enter corrected name\u2026" style="width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.84rem;">
           </div>
           <button class="btn btn-gold" onclick="addCorrection()" style="white-space:nowrap;height:36px;">Add Correction</button>
+        </div>
+        <div id="corr-theme-submit-row" style="display:none;text-align:right;">
+          <button class="btn btn-gold" onclick="addCorrection()" style="white-space:nowrap;">Add Correction</button>
         </div>
         <div id="corr-feedback" style="margin-top:8px;font-size:.78rem;font-style:italic;display:none;"></div>
       </div>
@@ -834,15 +843,19 @@ function initCorrectionForm() {
 
 function corrTypeChanged() {
   const type = document.getElementById('corr-type').value;
-  document.getElementById('corr-scene-row').style.display = type === 'scene' ? 'block' : 'none';
-  const themeWrap = document.getElementById('corr-theme-wrap');
-  themeWrap.querySelector('label').textContent = type === 'theme' ? 'Theme to Correct' : 'Theme';
+  const isTheme = type === 'theme';
+  document.getElementById('corr-theme-oldname-row').style.display = isTheme ? 'block' : 'none';
+  document.getElementById('corr-scene-row').style.display = isTheme ? 'none' : 'block';
+  document.getElementById('corr-theme-label').textContent = isTheme ? 'Correct Theme Name' : 'Theme';
+  document.getElementById('corr-newname-row').style.display = isTheme ? 'none' : 'grid';
+  document.getElementById('corr-theme-submit-row').style.display = isTheme ? 'block' : 'none';
+  if (!isTheme) corrThemeChanged();
 }
 
 function corrThemeChanged() {
   const theme = document.getElementById('corr-theme').value;
   const scenes = THEME_SCENES[theme] || [];
-  document.getElementById('corr-scene').innerHTML = scenes.map(s => `<option value="${esc(s)}">${s}</option>`).join('');
+  document.getElementById('corr-scene').innerHTML = scenes.map(s => `<option value="${escHTML(s)}">${s}</option>`).join('');
 }
 
 async function loadCorrections() {
@@ -864,9 +877,9 @@ function renderCorrections() {
     <thead><tr><th>Type</th><th>Theme</th><th>Old Name</th><th>New Name</th><th></th></tr></thead>
     <tbody>${corrections.map(c => `<tr>
       <td><span class="badge ${c.type==='theme'?'badge-amber':'badge-blue'}">${c.type}</span></td>
-      <td style="color:var(--text-mid)">${c.theme}</td>
-      <td style="color:var(--red);text-decoration:line-through">${c.old_name}</td>
-      <td style="color:var(--green)">${c.new_name}</td>
+      <td style="color:var(--text-mid)">${escHTML(c.theme)}</td>
+      <td style="color:var(--red);text-decoration:line-through">${escHTML(c.old_name)}</td>
+      <td style="color:var(--green)">${escHTML(c.new_name)}</td>
       <td><button class="btn btn-danger btn-sm" data-id="${c.id}" data-action="del-correction">&#10005;</button></td>
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -878,14 +891,22 @@ function renderCorrections() {
 
 async function addCorrection() {
   const type = document.getElementById('corr-type').value;
-  const theme = document.getElementById('corr-theme').value;
-  const oldName = type === 'scene'
-    ? document.getElementById('corr-scene').value
-    : theme;
-  const newName = document.getElementById('corr-new-name').value.trim();
+  const isTheme = type === 'theme';
   const fb = document.getElementById('corr-feedback');
 
-  if (!newName) { showFeedback(fb, 'Enter the corrected name.', false); return; }
+  let theme, oldName;
+  if (isTheme) {
+    // For theme corrections: old name is free text, new name is the catalog dropdown value
+    oldName = document.getElementById('corr-theme-old').value.trim();
+    theme   = document.getElementById('corr-theme').value; // correct theme name
+    if (!oldName) { showFeedback(fb, 'Enter the incorrect theme name as members typed it.', false); return; }
+  } else {
+    theme   = document.getElementById('corr-theme').value;
+    oldName = document.getElementById('corr-scene').value;
+  }
+
+  const newName = isTheme ? theme : document.getElementById('corr-new-name').value.trim();
+  if (!isTheme && !newName) { showFeedback(fb, 'Enter the corrected name.', false); return; }
   if (oldName === newName) { showFeedback(fb, 'Old and new names are the same.', false); return; }
 
   const res = await apiFetch('/corrections', {
@@ -893,6 +914,7 @@ async function addCorrection() {
     body: { type, theme, old_name: oldName, new_name: newName }
   });
   if (res.ok) {
+    document.getElementById('corr-theme-old').value = '';
     document.getElementById('corr-new-name').value = '';
     showFeedback(fb, 'Correction saved.', true);
     await loadCorrections();
@@ -942,7 +964,7 @@ function makeDraggable(containerEl) {
 async function loadCatalog() {
   const sel = document.getElementById('catalog-theme-select');
   if (!sel.options.length) {
-    sel.innerHTML = ALL_THEMES.map(t => `<option value="${esc(t)}">${t}</option>`).join('');
+    sel.innerHTML = ALL_THEMES.map(t => `<option value="${escHTML(t)}">${t}</option>`).join('');
   }
   const res = await apiFetch('/catalog');
   if (res.ok) {
