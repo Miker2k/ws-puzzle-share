@@ -269,7 +269,18 @@ body{
 
   <div class="screen" id="screen-matches">
     <div id="matches-loading" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Loading matches...</div>
-    <div id="matches-body"></div>
+    <div id="matches-body">
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;padding:0 2px;">What I Need</div>
+        <div style="font-size:.76rem;color:var(--text-dim);font-style:italic;margin-bottom:10px;padding:0 2px;">Fragments you can request from others today</div>
+        <div id="matches-need"></div>
+      </div>
+      <div>
+        <div style="font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:4px;padding:0 2px;">What I Have</div>
+        <div style="font-size:.76rem;color:var(--text-dim);font-style:italic;margin-bottom:10px;padding:0 2px;">Your duplicates that others are missing</div>
+        <div id="matches-have"></div>
+      </div>
+    </div>
   </div>
 
   <div class="screen" id="screen-fragments">
@@ -610,12 +621,16 @@ function saveScene(){
 async function renderMatches(){
   var loadEl=document.getElementById('matches-loading');
   var bodyEl=document.getElementById('matches-body');
+  var needEl=document.getElementById('matches-need');
+  var haveEl=document.getElementById('matches-have');
   loadEl.style.display='block';
-  bodyEl.innerHTML='';
+  bodyEl.style.display='none';
 
   if(!state.stateNumber){
     loadEl.style.display='none';
-    bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Complete your profile with Alliance and State to see matches.</div>';
+    bodyEl.style.display='block';
+    needEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Complete your profile with Alliance and State to see matches.</div>';
+    haveEl.innerHTML='';
     return;
   }
 
@@ -717,55 +732,65 @@ async function renderMatches(){
     });
 
     loadEl.style.display='none';
+    bodyEl.style.display='block';
 
-    if(!matches.length){
-      bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">No matches found yet. Check back after more alliance members submit their inventory.</div>';
-      return;
+    var emptyMsg='<div style="text-align:center;padding:24px;color:var(--text-dim);font-style:italic;font-size:.8rem;">None found.</div>';
+    var stateNote='<div style="font-size:.76rem;color:var(--text-dim);font-style:italic;margin-bottom:12px;">State '+state.stateNumber+(state.alliance?' &mdash; same alliance shown first':'')+'</div>';
+
+    var requests=matches.filter(function(m){return m.direction==='request';});
+    var gifts=matches.filter(function(m){return m.direction==='gift';});
+
+    // Sort each group: same alliance first, then remaining ascending
+    function sortGroup(arr){
+      arr.sort(function(a,b){
+        if(b.sameAlliance!==a.sameAlliance) return b.sameAlliance?1:-1;
+        if(a.remaining!==b.remaining) return a.remaining-b.remaining;
+        if(a.scene!==b.scene) return a.scene.localeCompare(b.scene);
+        return a.position-b.position;
+      });
+    }
+    sortGroup(requests);
+    sortGroup(gifts);
+
+    function buildSection(arr){
+      if(!arr.length) return emptyMsg;
+      var html='';
+      var currentScene=null;
+      arr.forEach(function(m){
+        var sk=m.theme+' \u203a '+m.scene;
+        if(sk!==currentScene){
+          if(currentScene!==null) html+='</div>';
+          html+='<div style="margin-bottom:12px;">';
+          html+='<div style="font-family:Cinzel,serif;font-size:.75rem;font-weight:700;color:var(--gold-bright);padding:10px 14px;background:var(--surface2);border:1px solid var(--border-bright);border-radius:6px 6px 0 0;">'+sk+'</div>';
+          currentScene=sk;
+        }
+        var allianceBadge=m.sameAlliance
+          ?'<span style="font-size:.6rem;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);margin-left:6px;">same alliance</span>'
+          :'';
+        var starsHtml='<span style="color:var(--gold);letter-spacing:-1px;">'+'★'.repeat(m.stars)+'<span style="opacity:.2">'+'★'.repeat(5-m.stars)+'</span></span>';
+        var urgencyColor=m.remaining===1?'#f87171':m.remaining<=3?'#f59e0b':'var(--border-bright)';
+        var label=m.direction==='request'?'From '+m.otherMember:'Gift to '+m.otherMember;
+        html+='<div style="background:var(--surface);border:1px solid var(--border);border-top:none;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
+        html+='<div style="width:5px;align-self:stretch;border-radius:2px;background:'+urgencyColor+';flex-shrink:0;"></div>';
+        html+='<div style="flex:1;min-width:0;">';
+        html+='<div style="font-family:Cinzel,serif;font-size:.78rem;color:var(--text);">'+label+allianceBadge+'</div>';
+        html+='<div style="font-size:.74rem;color:var(--text-dim);margin-top:2px;">Fragment #'+m.position+' &bull; '+starsHtml+' &bull; '+m.remaining+' remaining</div>';
+        html+='</div>';
+        html+='<span style="font-size:.72rem;padding:2px 10px;border-radius:999px;background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);flex-shrink:0;">+'+m.extras+' available</span>';
+        html+='</div>';
+      });
+      if(currentScene!==null) html+='</div>';
+      return html;
     }
 
-    // Sort: same alliance first, then by remaining (urgent first), then request before gift
-    matches.sort(function(a,b){
-      if(b.sameAlliance!==a.sameAlliance) return b.sameAlliance?1:-1;
-      if(a.remaining!==b.remaining) return a.remaining-b.remaining;
-      if(a.direction!==b.direction) return a.direction==='request'?-1:1;
-      if(a.scene!==b.scene) return a.scene.localeCompare(b.scene);
-      return a.position-b.position;
-    });
-
-    var html='<div style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:16px;">Showing matches from State '+state.stateNumber+(state.alliance?' &mdash; same alliance shown first':'')+'.</div>';
-    var currentScene=null;
-    matches.forEach(function(m){
-      var sceneKey=m.theme+' \u203a '+m.scene;
-      if(sceneKey!==currentScene){
-        if(currentScene!==null) html+='</div>';
-        html+='<div style="margin-bottom:12px;">';
-        html+='<div style="font-family:Cinzel,serif;font-size:.75rem;font-weight:700;color:var(--gold-bright);padding:10px 14px;background:var(--surface2);border:1px solid var(--border-bright);border-radius:6px 6px 0 0;">'+sceneKey+'</div>';
-        currentScene=sceneKey;
-      }
-      var allianceBadge=m.sameAlliance
-        ?'<span style="font-size:.6rem;padding:1px 7px;border-radius:999px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);margin-left:6px;">same alliance</span>'
-        :'';
-      var starsHtml='<span style="color:var(--gold);letter-spacing:-1px;">'+'★'.repeat(m.stars)+'<span style="opacity:.2">'+'★'.repeat(5-m.stars)+'</span></span>';
-      var isRequest=m.direction==='request';
-      var dirBadge=isRequest
-        ?'<span style="font-size:.6rem;padding:2px 8px;border-radius:999px;background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);font-family:Cinzel,serif;letter-spacing:.04em;">Request</span>'
-        :'<span style="font-size:.6rem;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3);font-family:Cinzel,serif;letter-spacing:.04em;">Gift</span>';
-      var urgencyColor=m.remaining===1?'#f87171':m.remaining<=3?'#f59e0b':'var(--border-bright)';
-      var actionHint=isRequest?'Request from '+m.otherMember:'Gift to '+m.otherMember;
-      html+='<div style="background:var(--surface);border:1px solid var(--border);border-top:none;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
-      html+='<div style="width:5px;align-self:stretch;border-radius:2px;background:'+urgencyColor+';flex-shrink:0;"></div>';
-      html+='<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">'+dirBadge;
-      html+='<div><div style="font-family:Cinzel,serif;font-size:.78rem;color:var(--text);">'+actionHint+allianceBadge+'</div>';
-      html+='<div style="font-size:.74rem;color:var(--text-dim);margin-top:2px;">Fragment #'+m.position+' &bull; '+starsHtml+' &bull; '+m.remaining+' remaining</div></div></div>';
-      html+='<span style="font-size:.72rem;padding:2px 10px;border-radius:999px;background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);flex-shrink:0;">+'+m.extras+' available</span>';
-      html+='</div>';
-    });
-    if(currentScene!==null) html+='</div>';
-    bodyEl.innerHTML=html;
+    needEl.innerHTML=stateNote+buildSection(requests);
+    haveEl.innerHTML=buildSection(gifts);
 
   } catch(e){
     loadEl.style.display='none';
-    bodyEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--red);font-style:italic;">Failed to load matches: '+e.message+'</div>';
+    bodyEl.style.display='block';
+    needEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--red);font-style:italic;">Failed to load matches: '+e.message+'</div>';
+    haveEl.innerHTML='';
   }
 }
 
