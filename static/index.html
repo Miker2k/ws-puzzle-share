@@ -265,6 +265,10 @@ body{
   <div class="screen" id="screen-scenes">
     <div class="screen-title">Scenes</div>
     <div class="screen-hint">Select a scene to enter your fragment status.</div>
+    <div class="quick-actions" style="margin-bottom:12px;">
+      <button class="quick-btn quick-btn-owned" style="font-size:.68rem;" onclick="markThemeComplete()">&#10003; Mark Theme Complete</button>
+    </div>
+    <div id="theme-complete-confirm" class="copy-confirm" style="margin-bottom:10px;"></div>
     <div id="scene-list"></div>
   </div>
 
@@ -656,6 +660,27 @@ function setStatus(idx,val){
 function markAll(val){
   fragData.forEach(function(f,i){f.status=val;if(val!=='DUPLICATE')f.duplicate_count=0;});
   renderFragGrid();updateProgress();
+}
+
+function markThemeComplete(){
+  if(!confirm('Mark all scenes in "'+state.theme+'" as fully owned? This will overwrite any existing data for scenes not yet entered.')) return;
+  var scenes = KNOWN.scenes[state.theme] || [];
+  scenes.forEach(function(sceneName) {
+    var dbFrags = getDbFragments(state.theme, sceneName) || [];
+    if (!dbFrags.length) return;
+    var frags = dbFrags.map(function(dbf) {
+      return {position:dbf.position, stars:dbf.stars, status:'OWNED', duplicate_count:0, requestable:dbf.stars<5};
+    });
+    var k = sceneKey(state.album, state.theme, sceneName);
+    state.inventory[k] = {
+      album: state.album, theme: state.theme, scene_name: sceneName,
+      progress: {owned: frags.length, total: frags.length},
+      fragments: frags, completed: true
+    };
+  });
+  persist();
+  renderScenes();
+  showConfirm('theme-complete-confirm', true, 'All ' + scenes.length + ' scenes in ' + state.theme + ' marked complete.');
 }
 function adjDupe(idx,delta){fragData[idx].duplicate_count=Math.max(1,(fragData[idx].duplicate_count||1)+delta);refreshCard(idx);}
 function refreshCard(idx){var el=document.getElementById('fc-'+idx);if(el)el.outerHTML=fragCardHTML(fragData[idx],idx);}
