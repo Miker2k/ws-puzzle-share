@@ -270,10 +270,81 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
   </main>
 </div>
 
+<!-- EDIT MEMBER MODAL -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border-bright);border-radius:14px;padding:28px 28px 24px;width:100%;max-width:400px;margin:24px;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);border-radius:14px 14px 0 0;"></div>
+    <div style="font-family:'Cinzel',serif;font-size:.95rem;font-weight:700;color:var(--gold-bright);margin-bottom:18px;" id="edit-modal-title">Edit Member</div>
+
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">In-Game Name</label>
+      <input id="edit-name" type="text" style="width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.9rem;">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Alliance</label>
+      <input id="edit-alliance" type="text" style="width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.9rem;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">State Number</label>
+      <input id="edit-state" type="number" style="width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.9rem;">
+    </div>
+    <div id="edit-feedback" style="font-size:.78rem;font-style:italic;margin-bottom:12px;display:none;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="saveEditMember()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ================================================================
-// CONFIG — API URL is the only thing stored client-side
+// EDIT MEMBER MODAL
 // ================================================================
+let editingId = null;
+
+function openEditModal(id, name, alliance, stateNum) {
+  editingId = id;
+  document.getElementById('edit-modal-title').textContent = 'Edit — ' + name;
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-alliance').value = alliance || '';
+  document.getElementById('edit-state').value = stateNum || '';
+  document.getElementById('edit-feedback').style.display = 'none';
+  const modal = document.getElementById('edit-modal');
+  modal.style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editingId = null;
+}
+
+async function saveEditMember() {
+  if (!editingId) return;
+  const name    = document.getElementById('edit-name').value.trim();
+  const alliance = document.getElementById('edit-alliance').value.trim();
+  const stateNum = document.getElementById('edit-state').value.trim();
+  const fb = document.getElementById('edit-feedback');
+
+  if (!name) { showFeedback(fb, 'Name cannot be empty.', false); return; }
+
+  const updates = { member_name: name };
+  if (alliance !== '') updates.alliance = alliance;
+  if (stateNum !== '') updates.state_number = parseInt(stateNum);
+
+  const res = await apiFetch('/submissions/' + editingId, { method: 'PATCH', body: updates });
+  if (res.ok) {
+    closeEditModal();
+    await loadData();
+  } else {
+    showFeedback(fb, 'Save failed: ' + (res.data?.error || res.status), false);
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+</script>
 const API_URL = 'https://aevurncobtrfutcfufut.supabase.co/functions/v1/admin-api';
 
 // ================================================================
@@ -501,8 +572,9 @@ function renderMembers() {
       <td><span class="badge badge-red">${miss} missing</span></td>
       <td><span class="badge badge-blue">${dup} dupes</span></td>
       <td style="font-size:.76rem;color:var(--text-dim);font-style:italic;">${timeAgo(m.submitted_at)}</td>
-      <td>
-        <button class="btn btn-outline btn-sm dl-btn" data-name="${esc(m.name)}">&#8595; JSON</button>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-outline btn-sm edit-btn" data-id="${m.id}" data-name="${esc(m.name)}" data-alliance="${esc(m.alliance||'')}" data-state="${esc(m.stateNumber||'')}">&#9998; Edit</button>
+        <button class="btn btn-outline btn-sm dl-btn" data-name="${esc(m.name)}" style="margin-left:4px;">&#8595; JSON</button>
         <button class="btn btn-danger btn-sm del-btn" style="margin-left:4px;" data-name="${esc(m.name)}" data-id="${m.id}">&#10005;</button>
       </td>
     </tr>`;
@@ -511,7 +583,9 @@ function renderMembers() {
     + '<th>Member</th><th>Alliance</th><th>State</th><th>Scenes</th><th>Missing</th><th>Dupes</th><th>Submitted</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
-  // Attach event listeners after innerHTML render
+  el.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.dataset.id, btn.dataset.name, btn.dataset.alliance, btn.dataset.state));
+  });
   el.querySelectorAll('.dl-btn').forEach(btn => {
     btn.addEventListener('click', () => downloadMember(btn.dataset.name));
   });
