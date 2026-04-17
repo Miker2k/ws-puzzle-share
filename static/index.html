@@ -924,9 +924,18 @@ function renderAlbums(){
     const pct=total>0?Math.round(logged/total*100):0;
     const pillClass=logged===total&&total>0?'pill-done':logged>0?'pill-partial':'pill-new';
     const pillText=logged===total&&total>0?'Complete':logged+'/'+total;
-    return '<div class="list-item" onclick="selectAlbum(\''+esc(a)+'\')"><div><div class="list-item-name">'+a+'</div><div class="list-item-meta">'+(KNOWN.themes[a]||[]).length+' themes &bull; '+total+' scenes total</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+    return '<div class="list-item" data-album="'+escHTML(a)+'"><div><div class="list-item-name">'+escHTML(a)+'</div><div class="list-item-meta">'+(KNOWN.themes[a]||[]).length+' themes &bull; '+total+' scenes total</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
   }).join('');
 }
+
+// Delegated click handlers -- safe for names containing any special characters
+document.addEventListener('click', function(e) {
+  var item = e.target.closest('.list-item');
+  if (!item) return;
+  if (item.dataset.album !== undefined) { selectAlbum(item.dataset.album); }
+  else if (item.dataset.theme !== undefined) { selectTheme(item.dataset.theme); }
+  else if (item.dataset.scene !== undefined) { selectScene(item.dataset.scene); }
+});
 
 function selectTheme(name){state.theme=name;nav('scenes');}
 
@@ -939,7 +948,7 @@ function renderThemes(){
     const done=allScenes.filter(function(s){const sc=inventoryGet(state.album,t,s);return sc&&sc.completed;}).length;
     const pillClass=done===allScenes.length&&allScenes.length>0?'pill-done':logged>0?'pill-partial':'pill-new';
     const pillText=done===allScenes.length&&allScenes.length>0?'Complete':logged+'/'+allScenes.length;
-    return '<div class="list-item" onclick="selectTheme(\''+esc(t)+'\')"><div><div class="list-item-name">'+t+'</div><div class="list-item-meta">'+allScenes.length+' scenes</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+    return '<div class="list-item" data-theme="'+escHTML(t)+'"><div><div class="list-item-name">'+escHTML(t)+'</div><div class="list-item-meta">'+allScenes.length+' scenes</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
   }).join('');
 }
 
@@ -992,7 +1001,7 @@ function renderScenes(){
     else if(sc.completed){pillClass='pill-done';pillText='Complete';}
     else{pillClass='pill-partial';pillText=owned+'/'+total;}
     const meta=entered>0?(miss+' missing'+(dup?' &bull; '+dup+' dupe':'')):'Tap to enter status';
-    return '<div class="list-item" onclick="selectScene(\''+esc(s)+'\')"><div><div class="list-item-name">'+s+'</div><div class="list-item-meta">'+meta+'</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
+    return '<div class="list-item" data-scene="'+escHTML(s)+'"><div><div class="list-item-name">'+escHTML(s)+'</div><div class="list-item-meta">'+meta+'</div></div><div class="list-item-right"><span class="status-pill '+pillClass+'">'+pillText+'</span><span class="chevron">&#8250;</span></div></div>';
   }).join('');
 }
 
@@ -1481,7 +1490,8 @@ function initExportButtons(){
   // Export screen no longer has platform-specific buttons -- nothing to init
 }
 
-function esc(str){return String(str==null?'':str).replace(/'/g,"\\'");}
+function esc(str){return String(str==null?'':str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function escHTML(str){return String(str==null?'':str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='new-account')createAccount();});
 
