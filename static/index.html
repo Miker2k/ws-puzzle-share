@@ -214,7 +214,7 @@ body{
       <div class="setup-logo" style="font-size:1.1rem;">&#9760; Select Account</div>
       <div style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:16px;" id="picker-discord-name"></div>
       <div id="account-list" style="margin-bottom:16px;"></div>
-      <button class="start-btn" onclick="showScreen('screen-new-account')" style="background:transparent;border:1px solid var(--border-bright);color:var(--text-mid);font-size:.78rem;">+ Add New Account</button>
+      <button class="start-btn" onclick="showScreen('new-account')" style="background:transparent;border:1px solid var(--border-bright);color:var(--text-mid);font-size:.78rem;">+ Add New Account</button>
     </div>
   </div>
 
@@ -271,7 +271,7 @@ body{
 
     <div class="export-section-label" style="margin-top:24px;">Switch Account</div>
     <button class="export-dl-btn" onclick="goAccountPicker()" style="background:var(--surface2);">&#9760; Switch In-Game Account</button>
-    <button class="export-dl-btn" onclick="showScreen('screen-new-account')" style="background:var(--surface2);margin-top:6px;">+ Add New Account</button>
+    <button class="export-dl-btn" onclick="showScreen('new-account')" style="background:var(--surface2);margin-top:6px;">+ Add New Account</button>
 
     <div class="export-section-label" style="margin-top:16px;">Share to Discord</div>
     <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
@@ -527,7 +527,7 @@ async function signOut() {
   state.accounts = [];
   state.inventory = {};
   localStorage.removeItem('ws_session');
-  showScreen('screen-login');
+  showScreen('login');
 }
 
 async function getSession() {
@@ -757,7 +757,7 @@ function load() {
 // ================================================================
 function goAccountPicker() {
   renderAccountPicker();
-  showScreen('screen-account-picker');
+  showScreen('account-picker');
 }
 
 function renderAccountPicker() {
@@ -1569,7 +1569,7 @@ if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albu
   await catalogPromise;
 
   if (!session) {
-    showScreen('screen-login');
+    showScreen('login');
     return;
   }
 
@@ -1578,7 +1578,7 @@ if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albu
   // Get user info
   var user = await getUserInfo();
   if (!user) {
-    showScreen('screen-login');
+    showScreen('login');
     return;
   }
 
@@ -1607,7 +1607,7 @@ if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albu
       notice.innerHTML = 'We found saved data for <strong style="color:var(--gold)">' + localName + '</strong>. Enter that name below to import it to your Discord account automatically.';
       document.getElementById('new-name-input').value = localName;
     }
-    showScreen('screen-new-account');
+    showScreen('new-account');
     return;
   }
 
