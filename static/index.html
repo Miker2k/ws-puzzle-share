@@ -509,11 +509,8 @@ async function signInWithDiscord() {
   var btn = document.getElementById('discord-login-btn');
   btn.disabled = true;
   btn.textContent = 'Redirecting\u2026';
-  var res = await fetch(SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + encodeURIComponent(window.location.origin + window.location.pathname), {
-    headers: { 'apikey': SUPABASE_ANON_KEY }
-  });
-  // Supabase returns a redirect -- follow it
-  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + encodeURIComponent(window.location.origin + window.location.pathname);
+  var redirectTo = encodeURIComponent(window.location.origin + window.location.pathname);
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + redirectTo;
 }
 
 async function signOut() {
