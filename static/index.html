@@ -1560,74 +1560,81 @@ if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albu
 // STARTUP -- check auth then navigate
 // ================================================================
 (async function init() {
-  // Load catalog overrides and corrections in parallel with auth check
-  var catalogPromise = Promise.all([fetchCatalogOverrides(), fetchCorrections()]);
+  try {
+    // Load catalog overrides and corrections in parallel with auth check
+    var catalogPromise = Promise.all([fetchCatalogOverrides(), fetchCorrections()]);
 
-  // Check for existing session
-  var session = await getSession();
+    // Check for existing session
+    var session = await getSession();
 
-  await catalogPromise;
+    await catalogPromise;
 
-  if (!session) {
-    showScreen('login');
-    return;
-  }
-
-  state.session = session;
-
-  // Get user info
-  var user = await getUserInfo();
-  if (!user) {
-    showScreen('login');
-    return;
-  }
-
-  // Store userId on session for account creation
-  state.session._userId = user.id;
-  state.discordName = user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name || user.email) || 'Unknown';
-
-  // Load game accounts
-  await loadAccounts();
-
-  if (!state.accounts.length) {
-    // No accounts yet -- check for localStorage migration
-    var localRaw = localStorage.getItem(KEY);
-    var localName = '';
-    var localInventory = null;
-    if (localRaw) {
-      try {
-        var local = JSON.parse(localRaw);
-        localName = local.memberName || '';
-        localInventory = local.inventory || null;
-      } catch(e) {}
-    }
-    if (localName && localInventory && Object.keys(localInventory).length) {
-      var notice = document.getElementById('migration-notice');
-      notice.style.display = 'block';
-      notice.innerHTML = 'We found saved data for <strong style="color:var(--gold)">' + localName + '</strong>. Enter that name below to import it to your Discord account automatically.';
-      document.getElementById('new-name-input').value = localName;
-    }
-    showScreen('new-account');
-    return;
-  }
-
-  // If we have a previously selected account, use it
-  if (state.accountId) {
-    var prev = state.accounts.find(function(a){ return a.id === state.accountId; });
-    if (prev) {
-      await selectAccount(prev);
+    if (!session) {
+      showScreen('login');
       return;
     }
-  }
 
-  // Single account -- go straight in
-  if (state.accounts.length === 1) {
-    await selectAccount(state.accounts[0]);
-    return;
-  }
+    state.session = session;
 
-  // Multiple accounts -- show picker
-  goAccountPicker();
+    // Get user info -- if this fails the session is invalid
+    var user = await getUserInfo();
+    if (!user) {
+      localStorage.removeItem('ws_session');
+      showScreen('login');
+      return;
+    }
+
+    state.session._userId = user.id;
+    state.discordName = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name || user.email)) || 'Unknown';
+
+    // Load game accounts
+    await loadAccounts();
+
+    if (!state.accounts.length) {
+      // No accounts yet -- check for localStorage migration
+      var localRaw = localStorage.getItem(KEY);
+      var localName = '';
+      var localInventory = null;
+      if (localRaw) {
+        try {
+          var local = JSON.parse(localRaw);
+          localName = local.memberName || '';
+          localInventory = local.inventory || null;
+        } catch(e) {}
+      }
+      if (localName && localInventory && Object.keys(localInventory).length) {
+        var notice = document.getElementById('migration-notice');
+        notice.style.display = 'block';
+        notice.innerHTML = 'We found saved data for <strong style="color:var(--gold)">' + localName + '</strong>. Enter that name below to import it to your Discord account automatically.';
+        document.getElementById('new-name-input').value = localName;
+      }
+      showScreen('new-account');
+      return;
+    }
+
+    // If we have a previously selected account, use it
+    if (state.accountId) {
+      var prev = state.accounts.find(function(a){ return a.id === state.accountId; });
+      if (prev) {
+        await selectAccount(prev);
+        return;
+      }
+    }
+
+    // Single account -- go straight in
+    if (state.accounts.length === 1) {
+      await selectAccount(state.accounts[0]);
+      return;
+    }
+
+    // Multiple accounts -- show picker
+    goAccountPicker();
+
+  } catch(e) {
+    console.error('Init error:', e);
+    localStorage.removeItem('ws_session');
+    showScreen('login');
+  }
 })();
 </script>
 </body>
