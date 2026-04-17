@@ -177,6 +177,7 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
       <div class="tab" data-tab="broadcast" onclick="switchTab('broadcast')">Broadcast</div>
       <div class="tab" data-tab="corrections" onclick="switchTab('corrections');loadCorrections()">Corrections</div>
       <div class="tab" data-tab="catalog" onclick="switchTab('catalog');loadCatalog()">Scene Order</div>
+      <div class="tab" data-tab="accounts" onclick="switchTab('accounts');loadAccountsTab()">Accounts</div>
     </div>
 
     <div class="tab-content active" id="tab-members">
@@ -290,7 +291,52 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
       </div>
     </div>
 
+    <div class="tab-content" id="tab-accounts">
+      <div class="section-hdr">Member Accounts</div>
+      <p class="section-sub">Link existing submission names to Discord accounts. Members must have signed in with Discord at least once before they can be linked.</p>
+
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Unlinked Submissions</div>
+        <p style="font-size:.8rem;color:var(--text-dim);font-style:italic;margin-bottom:12px;">These members have submitted inventory but have no Discord account linked yet.</p>
+        <div id="unlinked-list"><div class="loading">Loading&#8230;</div></div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:20px;">
+        <div style="font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Linked Accounts</div>
+        <div id="linked-list"><div class="loading">Loading&#8230;</div></div>
+      </div>
+    </div>
+
   </main>
+</div>
+
+<!-- LINK ACCOUNT MODAL -->
+<div id="link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border-bright);border-radius:14px;padding:28px 28px 24px;width:100%;max-width:440px;margin:24px;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);border-radius:14px 14px 0 0;"></div>
+    <div style="font-family:'Cinzel',serif;font-size:.95rem;font-weight:700;color:var(--gold-bright);margin-bottom:6px;">Link Discord Account</div>
+    <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:18px;">Linking submission: <strong id="link-member-name" style="color:var(--text);"></strong></div>
+
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'Cinzel',serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);display:block;margin-bottom:5px;">Discord Username or User ID</label>
+      <input id="link-discord-input" type="text" placeholder="e.g. mikey2k or 442076309498232852"
+        style="width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border-bright);border-radius:5px;color:var(--text);font-size:.9rem;">
+      <div style="font-size:.72rem;color:var(--text-dim);margin-top:5px;font-style:italic;">The member must have signed in with Discord at least once.</div>
+    </div>
+
+    <div id="link-lookup-result" style="display:none;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;">
+      <div style="font-size:.78rem;color:var(--text-dim);">Found:</div>
+      <div id="link-user-display" style="font-size:.88rem;color:var(--text);margin-top:2px;"></div>
+    </div>
+
+    <div id="link-error" style="display:none;font-size:.78rem;color:var(--red);font-style:italic;margin-bottom:10px;"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeLinkModal()">Cancel</button>
+      <button class="btn btn-outline btn-sm" onclick="lookupDiscordUser()" style="color:var(--ice);border-color:var(--ice);">&#128269; Look Up</button>
+      <button class="btn btn-gold" id="link-confirm-btn" onclick="confirmLink()" disabled>Link Account</button>
+    </div>
+  </div>
 </div>
 
 <!-- EDIT MEMBER MODAL -->
@@ -894,6 +940,146 @@ function corrThemeChanged() {
   const scenes = THEME_SCENES[theme] || [];
   document.getElementById('corr-scene').innerHTML = scenes.map(s => `<option value="${escHTML(s)}">${s}</option>`).join('');
 }
+
+// ================================================================
+// ACCOUNTS TAB
+// ================================================================
+let linkingMemberName = '';
+let linkingUserId = null;
+
+async function loadAccountsTab() {
+  document.getElementById('unlinked-list').innerHTML = '<div class="loading">Loading\u2026</div>';
+  document.getElementById('linked-list').innerHTML = '<div class="loading">Loading\u2026</div>';
+
+  // Get all submissions
+  const subsRes = await apiFetch('/submissions');
+  const submissions = subsRes.ok ? (subsRes.data || []) : [];
+
+  // Get all game_accounts via Supabase directly (service role in Edge Function)
+  const acctRes = await apiFetch('/accounts');
+  const accounts = acctRes.ok ? (acctRes.data || []) : [];
+
+  // Build set of linked in-game names (lowercased for comparison)
+  const linkedNames = new Set(accounts.map(a => a.in_game_name.toLowerCase()));
+
+  // Unlinked: submissions with no matching game_account
+  const unlinked = submissions.filter(s => !linkedNames.has((s.member_name||'').toLowerCase()));
+  renderUnlinked(unlinked);
+  renderLinked(accounts, submissions);
+}
+
+function renderUnlinked(unlinked) {
+  const el = document.getElementById('unlinked-list');
+  if (!unlinked.length) {
+    el.innerHTML = '<div style="color:var(--green);font-size:.82rem;font-style:italic;padding:8px 0;">All members are linked.</div>';
+    return;
+  }
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>In-Game Name</th><th>Alliance</th><th>State</th><th>Last Submit</th><th></th></tr></thead>
+    <tbody>${unlinked.map(s => `<tr>
+      <td style="color:var(--text)">${escHTML(s.member_name)}</td>
+      <td style="color:var(--text-dim)">${escHTML(s.alliance||'--')}</td>
+      <td style="color:var(--text-dim)">${s.state_number||'--'}</td>
+      <td style="color:var(--text-dim);font-size:.76rem;">${s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : '--'}</td>
+      <td><button class="btn btn-gold btn-sm" onclick="openLinkModal('${escHTML(s.member_name)}')">&#128279; Link</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderLinked(accounts, submissions) {
+  const el = document.getElementById('linked-list');
+  if (!accounts.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:.82rem;font-style:italic;padding:8px 0;">No linked accounts yet.</div>';
+    return;
+  }
+  // Build submission lookup
+  const subMap = {};
+  submissions.forEach(s => { subMap[(s.member_name||'').toLowerCase()] = s; });
+
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>In-Game Name</th><th>Discord</th><th>Alliance</th><th>State</th><th>Scenes</th></tr></thead>
+    <tbody>${accounts.map(a => {
+      const sub = subMap[a.in_game_name.toLowerCase()];
+      const sceneCount = sub && sub.inventory ? sub.inventory.length : '--';
+      return `<tr>
+        <td style="color:var(--text)">${escHTML(a.in_game_name)}</td>
+        <td style="color:var(--ice);font-size:.76rem;">${escHTML(a.discord_name||a.user_id||'--')}</td>
+        <td style="color:var(--text-dim)">${escHTML(a.alliance||'--')}</td>
+        <td style="color:var(--text-dim)">${a.state_number||'--'}</td>
+        <td style="color:var(--text-dim)">${sceneCount}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function openLinkModal(memberName) {
+  linkingMemberName = memberName;
+  linkingUserId = null;
+  document.getElementById('link-member-name').textContent = memberName;
+  document.getElementById('link-discord-input').value = '';
+  document.getElementById('link-lookup-result').style.display = 'none';
+  document.getElementById('link-error').style.display = 'none';
+  document.getElementById('link-confirm-btn').disabled = true;
+  document.getElementById('link-modal').style.display = 'flex';
+}
+
+function closeLinkModal() {
+  document.getElementById('link-modal').style.display = 'none';
+  linkingMemberName = '';
+  linkingUserId = null;
+}
+
+async function lookupDiscordUser() {
+  const input = document.getElementById('link-discord-input').value.trim();
+  const errEl = document.getElementById('link-error');
+  const resultEl = document.getElementById('link-lookup-result');
+  errEl.style.display = 'none';
+  resultEl.style.display = 'none';
+  document.getElementById('link-confirm-btn').disabled = true;
+  linkingUserId = null;
+
+  if (!input) { errEl.textContent = 'Enter a Discord username or user ID.'; errEl.style.display = 'block'; return; }
+
+  const res = await apiFetch('/lookup-user?q=' + encodeURIComponent(input));
+  if (!res.ok || !res.data || !res.data.id) {
+    errEl.textContent = res.data?.error || 'User not found. Make sure they have signed in with Discord first.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  linkingUserId = res.data.id;
+  document.getElementById('link-user-display').innerHTML =
+    '<strong>' + escHTML(res.data.discord_name || res.data.email || 'Unknown') + '</strong>' +
+    '<span style="color:var(--text-dim);font-size:.74rem;margin-left:8px;">' + escHTML(res.data.id) + '</span>';
+  resultEl.style.display = 'block';
+  document.getElementById('link-confirm-btn').disabled = false;
+}
+
+async function confirmLink() {
+  if (!linkingUserId || !linkingMemberName) return;
+  const btn = document.getElementById('link-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Linking\u2026';
+
+  const res = await apiFetch('/link-account', {
+    method: 'POST',
+    body: { user_id: linkingUserId, in_game_name: linkingMemberName }
+  });
+
+  if (res.ok) {
+    closeLinkModal();
+    await loadAccountsTab();
+  } else {
+    document.getElementById('link-error').textContent = res.data?.error || 'Link failed.';
+    document.getElementById('link-error').style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Link Account';
+  }
+}
+
+document.getElementById('link-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeLinkModal();
+});
 
 async function loadCorrections() {
   const el = document.getElementById('corrections-list');
