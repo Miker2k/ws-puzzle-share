@@ -144,11 +144,11 @@ body{font-family:'Crimson Pro',Georgia,serif;background:var(--bg);color:var(--te
     <div class="auth-card">
       <div class="auth-logo">&#10052; Fragment Tracker</div>
       <div class="auth-sub">Alliance Coordinator Dashboard</div>
-      <label class="auth-label" for="pw-input">Coordinator Password</label>
-      <input class="auth-input" type="password" id="pw-input" placeholder="Enter password"
-        onkeydown="if(event.key==='Enter')doAuth()">
-      <button class="auth-btn" onclick="doAuth()">Sign In &#8594;</button>
-      <div class="auth-err" id="auth-err">Incorrect password.</div>
+      <button class="auth-btn" id="discord-btn" onclick="adminSignIn()" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#5865F2,#7289da);border:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028z"/></svg>
+        Sign in with Discord
+      </button>
+      <div class="auth-err" id="auth-err" style="display:none;">You don't have coordinator access.</div>
     </div>
   </div>
 </div>
@@ -371,39 +371,66 @@ document.getElementById('edit-modal').addEventListener('click', function(e) {
 
 <script>
 // ================================================================
-// CONFIG — API URL is the only thing stored client-side
+// CONFIG
 // ================================================================
-const API_URL = 'https://aevurncobtrfutcfufut.supabase.co/functions/v1/admin-api';
+const API_URL       = 'https://aevurncobtrfutcfufut.supabase.co/functions/v1/admin-api';
+const SUPABASE_URL  = 'https://aevurncobtrfutcfufut.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
 
 // ================================================================
-// AUTH
+// AUTH — Discord OAuth via Supabase
 // ================================================================
-const SESSION_KEY = 'ws_admin_pw';
+const SESSION_KEY = 'ws_admin_session';
+let adminSession = null;
 
-async function doAuth() {
-  const pw  = document.getElementById('pw-input').value;
-  const err = document.getElementById('auth-err');
-  err.style.display = 'none';
+async function adminSignIn() {
+  const btn = document.getElementById('discord-btn');
+  btn.disabled = true;
+  btn.textContent = 'Redirecting…';
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + encodeURIComponent(window.location.href.split('#')[0]);
+}
 
-  try {
-    const res = await apiFetch('/auth', { method: 'POST', body: { password: pw } });
-    if (res.ok) {
-      sessionStorage.setItem(SESSION_KEY, pw);
-      showDashboard();
-    } else {
-      err.style.display = 'block';
-      document.getElementById('pw-input').value = '';
-      document.getElementById('pw-input').focus();
+async function getAdminSession() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const expiresIn = parseInt(params.get('expires_in') || '3600');
+    if (accessToken) {
+      const session = { access_token: accessToken, refresh_token: refreshToken, expires_at: Date.now() + expiresIn * 1000 };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      window.history.replaceState(null, '', window.location.pathname);
+      return session;
     }
-  } catch(e) {
-    err.textContent = 'Could not reach server. Check API is running.';
-    err.style.display = 'block';
   }
+  try {
+    const stored = localStorage.getItem(SESSION_KEY);
+    if (stored) {
+      let session = JSON.parse(stored);
+      if (session.expires_at && Date.now() > session.expires_at - 60000) {
+        const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          session = { access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + (data.expires_in || 3600) * 1000 };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        } else { localStorage.removeItem(SESSION_KEY); return null; }
+      }
+      return session;
+    }
+  } catch(e) {}
+  return null;
 }
 
 function doLogout() {
-  sessionStorage.removeItem(SESSION_KEY);
-  location.reload();
+  localStorage.removeItem(SESSION_KEY);
+  adminSession = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
 }
 
 function showDashboard() {
@@ -413,16 +440,13 @@ function showDashboard() {
 }
 
 // ================================================================
-// API HELPER — attaches password header on every request
+// API HELPER — attaches user token
 // ================================================================
 async function apiFetch(path, options = {}) {
-  const pw = sessionStorage.getItem(SESSION_KEY);
+  const token = adminSession ? adminSession.access_token : '';
   const res = await fetch(API_URL + path, {
     method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(pw ? { 'x-admin-password': pw } : {})
-    },
+    headers: { 'Content-Type': 'application/json', 'x-user-token': token },
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   return { ok: res.ok, status: res.status, data: res.status !== 204 ? await res.json().catch(() => null) : null };
@@ -800,7 +824,20 @@ function legacyCopy(text, cb) {
 // ================================================================
 // INIT
 // ================================================================
-if (sessionStorage.getItem(SESSION_KEY)) showDashboard();
+(async function() {
+  const session = await getAdminSession();
+  if (!session) return;
+  // Check admin access via Edge Function
+  const res = await fetch(API_URL + '/check-admin', {
+    headers: { 'Content-Type': 'application/json', 'x-user-token': session.access_token }
+  });
+  if (res.ok) {
+    adminSession = session;
+    showDashboard();
+  } else {
+    document.getElementById('auth-err').style.display = 'block';
+  }
+})();
 
 // ================================================================
 // CORRECTIONS

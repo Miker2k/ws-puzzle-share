@@ -191,11 +191,49 @@ body{
       <div class="breadcrumb" id="breadcrumb"></div>
     </div>
   </div>
-  <button class="export-btn hidden" id="export-top-btn" onclick="submitToAlliance()">&#9650; Submit</button>
+  <button class="export-btn hidden" id="export-top-btn" onclick="manualSync()">&#8635; Sync</button>
 </header>
 
 <main class="main">
-  <div class="screen active" id="screen-setup">
+  <div class="screen active" id="screen-login">
+    <div class="setup-card">
+      <div class="setup-logo">&#10052; Fragment Tracker</div>
+      <div class="setup-sub">Track your Whiteout Survival fragment inventory and coordinate gifting with your alliance.</div>
+      <button class="start-btn" id="discord-login-btn" onclick="signInWithDiscord()" style="background:linear-gradient(135deg,#5865F2,#7289da);border:none;margin-top:8px;">
+        <span style="display:inline-flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028z"/></svg>
+          Sign in with Discord
+        </span>
+      </button>
+      <div id="login-error" style="margin-top:10px;font-size:.78rem;color:var(--red);font-style:italic;display:none;"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-account-picker">
+    <div class="setup-card">
+      <div class="setup-logo" style="font-size:1.1rem;">&#9760; Select Account</div>
+      <div style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:16px;" id="picker-discord-name"></div>
+      <div id="account-list" style="margin-bottom:16px;"></div>
+      <button class="start-btn" onclick="showScreen('screen-new-account')" style="background:transparent;border:1px solid var(--border-bright);color:var(--text-mid);font-size:.78rem;">+ Add New Account</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-new-account">
+    <div class="setup-card">
+      <div class="setup-logo" style="font-size:1.1rem;">&#10052; New Account</div>
+      <div id="migration-notice" style="display:none;background:rgba(232,168,32,.1);border:1px solid rgba(232,168,32,.3);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:.78rem;color:var(--gold);line-height:1.6;"></div>
+      <label class="field-label" for="new-name-input">In-Game Name</label>
+      <input class="text-input" id="new-name-input" type="text" placeholder="e.g. Mikey" autocomplete="off" maxlength="30" style="margin-bottom:12px;">
+      <label class="field-label" for="new-alliance-input">Alliance Name</label>
+      <input class="text-input" id="new-alliance-input" type="text" placeholder="e.g. REX" autocomplete="off" maxlength="40" style="margin-bottom:12px;">
+      <label class="field-label" for="new-state-input">State Number</label>
+      <input class="text-input" id="new-state-input" type="number" placeholder="e.g. 1160" min="1" max="9999" style="margin-bottom:4px;">
+      <button class="start-btn" onclick="createAccount()">Create Account &#8594;</button>
+      <div id="new-account-error" style="margin-top:8px;font-size:.78rem;color:var(--red);font-style:italic;display:none;"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-setup">
     <div class="setup-card">
       <div class="setup-logo">&#10052; Fragment Tracker</div>
       <div class="setup-sub">Track your Whiteout Survival fragment inventory and coordinate gifting with your alliance.</div>
@@ -222,6 +260,7 @@ body{
   <div class="screen" id="screen-profile">
     <div class="setup-card" style="margin-top:0;">
       <div class="setup-logo" style="font-size:1.1rem;">&#9998; My Profile</div>
+      <div style="font-size:.72rem;color:var(--text-dim);margin-bottom:4px;">Discord: <span id="profile-discord-name" style="color:var(--ice);"></span></div>
       <div style="font-family:'Cinzel',serif;font-size:.72rem;color:var(--text-dim);margin-bottom:16px;">In-game name: <span id="profile-name-display" style="color:var(--gold-bright);"></span></div>
       <label class="field-label" for="profile-alliance-input">Alliance Name</label>
       <input class="text-input" id="profile-alliance-input" type="text" placeholder="e.g. Dark Knights" autocomplete="off" maxlength="40" style="margin-bottom:12px;">
@@ -230,7 +269,11 @@ body{
       <button class="start-btn" onclick="doProfileSave()">Save Profile &#8594;</button>
     </div>
 
-    <div class="export-section-label" style="margin-top:24px;">Share to Discord</div>
+    <div class="export-section-label" style="margin-top:24px;">Switch Account</div>
+    <button class="export-dl-btn" onclick="goAccountPicker()" style="background:var(--surface2);">&#9760; Switch In-Game Account</button>
+    <button class="export-dl-btn" onclick="showScreen('screen-new-account')" style="background:var(--surface2);margin-top:6px;">+ Add New Account</button>
+
+    <div class="export-section-label" style="margin-top:16px;">Share to Discord</div>
     <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
     <div id="copy-confirm-missing" class="copy-confirm"></div>
     <button class="export-dl-btn discord" onclick="copyDiscord('dupes')" style="margin-top:6px;">&#128203; Copy Duplicates List</button>
@@ -244,6 +287,9 @@ body{
     </label>
     <div id="restore-confirm-export" class="copy-confirm" style="margin-top:6px;"></div>
     <button class="export-dl-btn danger" onclick="clearDB()">&#128465; Clear All Saved Data</button>
+
+    <div class="export-section-label">Account</div>
+    <button class="export-dl-btn danger" onclick="signOut()" style="border-color:var(--border-bright);color:var(--text-mid);">Sign Out of Discord</button>
   </div>
 
   <div class="screen" id="screen-albums">
@@ -319,11 +365,20 @@ body{
 
   <div class="screen" id="screen-export">
     <div class="export-card">
-      <div class="export-title">&#9650; Submitting to Alliance</div>
-      <div id="export-stats"></div>
+      <div class="export-title">&#9660; Summary</div>
+      <div class="export-stats" id="export-stats"></div>
+      <div style="font-family:'Cinzel',serif;font-size:.7rem;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;">Scenes Logged</div>
+      <div class="export-scene-list" id="export-scene-list"></div>
     </div>
-    <div id="submit-confirm" class="copy-confirm" style="margin-top:8px;"></div>
-    <div id="copy-confirm-json" class="copy-confirm"></div>
+
+    <div class="export-section-label">Alliance Sync</div>
+    <div style="font-size:.78rem;color:var(--text-dim);font-style:italic;margin-bottom:10px;line-height:1.6;">Your inventory syncs automatically whenever you save a scene. Use the &#8635; Sync button in the header to force an immediate update.</div>
+
+    <div class="export-section-label">Share to Discord</div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('missing')">&#128203; Copy Missing Fragments List</button>
+    <div id="copy-confirm-missing-export" class="copy-confirm"></div>
+    <button class="export-dl-btn discord" onclick="copyDiscord('dupes')" style="margin-top:6px;">&#128203; Copy Duplicates List</button>
+    <div id="copy-confirm-dupes-export" class="copy-confirm"></div>
   </div>
 </main>
 
@@ -377,84 +432,421 @@ function resolveScene(theme, name) {
 const SUPABASE_URL = 'https://aevurncobtrfutcfufut.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
 
-async function submitToAlliance() {
+async function manualSync() {
   var btn = document.getElementById('export-top-btn');
-  var originalText = btn.textContent;
-
-  if (!state.memberName) {
-    alert('Enter your in-game name before submitting.');
-    return;
-  }
-  var scenes = Object.values(state.inventory);
-  if (!scenes.length) {
-    alert('No scene data to submit yet.');
-    return;
-  }
-
+  var orig = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Submitting\u2026';
-
+  btn.textContent = 'Syncing\u2026';
   try {
-    var payload = {
-      member_name: state.memberName,
-      alliance: state.alliance || null,
-      state_number: state.stateNumber || null,
-      submitted_at: new Date().toISOString(),
-      inventory: scenes
-    };
-
-    var res = await fetch(SUPABASE_URL + '/rest/v1/submissions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-      btn.textContent = '\u2713 Submitted!';
-      setTimeout(function(){ btn.textContent = originalText; btn.disabled = false; }, 3000);
-    } else {
-      var err = await res.json().catch(function(){ return {}; });
-      throw new Error(err.message || 'HTTP ' + res.status);
-    }
+    await syncSubmission();
+    btn.textContent = '\u2713 Synced!';
+    setTimeout(function(){ btn.textContent = orig; btn.disabled = false; }, 2000);
   } catch(e) {
-    alert('Submission failed: ' + e.message);
+    btn.textContent = orig;
     btn.disabled = false;
-    btn.textContent = originalText;
+    alert('Sync failed: ' + e.message);
   }
 }
 
 // ================================================================
+// CONFIG
+// ================================================================
+const SUPABASE_URL      = 'https://aevurncobtrfutcfufut.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
+const SUPABASE_CLIENT_ID = 'https://aevurncobtrfutcfufut.supabase.co';
+
+// ================================================================
+// STATE
+// ================================================================
 const KEY = 'ws_member_v2';
-let state = {screen:'setup',memberName:'',alliance:'',stateNumber:'',album:'',theme:'',scene:'',fragCount:15,inventory:{}};
+let state = {
+  screen:'login', memberName:'', alliance:'', stateNumber:'',
+  album:'', theme:'', scene:'', fragCount:15, inventory:{},
+  // Auth state
+  session: null,       // Supabase session
+  accountId: null,     // current game_account.id
+  discordName: '',     // Discord display name
+  accounts: [],        // all game_accounts for this user
+};
 let fragData = [];
 
-function load(){try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);Object.assign(state,s);}}catch{}}
-function persist(){localStorage.setItem(KEY,JSON.stringify({memberName:state.memberName,alliance:state.alliance,stateNumber:state.stateNumber,album:state.album,theme:state.theme,inventory:state.inventory}));}
+// ================================================================
+// SUPABASE HELPERS
+// ================================================================
+function sbHeaders(extraHeaders) {
+  var h = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + (state.session ? state.session.access_token : SUPABASE_ANON_KEY)
+  };
+  return Object.assign(h, extraHeaders || {});
+}
+
+async function sbGet(path) {
+  var res = await fetch(SUPABASE_URL + path, { headers: sbHeaders() });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function sbPost(path, body, prefer) {
+  var h = sbHeaders(prefer ? { 'Prefer': prefer } : {});
+  var res = await fetch(SUPABASE_URL + path, { method: 'POST', headers: h, body: JSON.stringify(body) });
+  if (!res.ok) { var e = await res.json().catch(()=>({})); throw new Error(e.message || 'HTTP ' + res.status); }
+  return prefer === 'return=minimal' ? null : res.json();
+}
+
+async function sbPatch(path, body) {
+  var res = await fetch(SUPABASE_URL + path, { method: 'PATCH', headers: sbHeaders({'Prefer':'return=minimal'}), body: JSON.stringify(body) });
+  if (!res.ok) { var e = await res.json().catch(()=>({})); throw new Error(e.message || 'HTTP ' + res.status); }
+}
+
+async function sbUpsert(path, body) {
+  var res = await fetch(SUPABASE_URL + path, {
+    method: 'POST',
+    headers: sbHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { var e = await res.json().catch(()=>({})); throw new Error(e.message || 'HTTP ' + res.status); }
+}
+
+// ================================================================
+// AUTH
+// ================================================================
+async function signInWithDiscord() {
+  var btn = document.getElementById('discord-login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Redirecting\u2026';
+  var res = await fetch(SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + encodeURIComponent(window.location.origin + window.location.pathname), {
+    headers: { 'apikey': SUPABASE_ANON_KEY }
+  });
+  // Supabase returns a redirect -- follow it
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=discord&redirect_to=' + encodeURIComponent(window.location.origin + window.location.pathname);
+}
+
+async function signOut() {
+  if (!confirm('Sign out of Discord?')) return;
+  await fetch(SUPABASE_URL + '/auth/v1/logout', {
+    method: 'POST',
+    headers: sbHeaders()
+  });
+  state.session = null;
+  state.accountId = null;
+  state.accounts = [];
+  state.inventory = {};
+  localStorage.removeItem('ws_session');
+  showScreen('screen-login');
+}
+
+async function getSession() {
+  // Check URL hash for OAuth callback tokens
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var accessToken  = params.get('access_token');
+    var refreshToken = params.get('refresh_token');
+    var expiresIn    = parseInt(params.get('expires_in') || '3600');
+    if (accessToken) {
+      var session = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: Date.now() + expiresIn * 1000
+      };
+      localStorage.setItem('ws_session', JSON.stringify(session));
+      window.history.replaceState(null, '', window.location.pathname);
+      return session;
+    }
+  }
+  // Check localStorage for existing session
+  try {
+    var stored = localStorage.getItem('ws_session');
+    if (stored) {
+      var session = JSON.parse(stored);
+      // Refresh if expired
+      if (session.expires_at && Date.now() > session.expires_at - 60000) {
+        var res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        });
+        if (res.ok) {
+          var data = await res.json();
+          session = {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            expires_at: Date.now() + (data.expires_in || 3600) * 1000
+          };
+          localStorage.setItem('ws_session', JSON.stringify(session));
+        } else {
+          localStorage.removeItem('ws_session');
+          return null;
+        }
+      }
+      return session;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function getUserInfo() {
+  var res = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: sbHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+// ================================================================
+// GAME ACCOUNTS
+// ================================================================
+async function loadAccounts() {
+  var rows = await sbGet('/rest/v1/game_accounts?select=*&order=created_at.asc');
+  state.accounts = rows || [];
+  return state.accounts;
+}
+
+async function createGameAccount(name, alliance, stateNum, inventoryData) {
+  var body = {
+    user_id: state.session._userId,
+    in_game_name: name,
+    alliance: alliance || null,
+    state_number: stateNum ? parseInt(stateNum) : null
+  };
+  var res = await fetch(SUPABASE_URL + '/rest/v1/game_accounts', {
+    method: 'POST',
+    headers: sbHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { var e = await res.json().catch(()=>({})); throw new Error(e.message || 'HTTP ' + res.status); }
+  var rows = await res.json();
+  var account = Array.isArray(rows) ? rows[0] : rows;
+
+  // If migrating from localStorage, write all inventory scenes
+  if (inventoryData) {
+    await migrateInventory(account.id, inventoryData);
+  }
+  return account;
+}
+
+async function selectAccount(account) {
+  state.accountId  = account.id;
+  state.memberName = account.in_game_name;
+  state.alliance   = account.alliance || '';
+  state.stateNumber = account.state_number ? String(account.state_number) : '';
+  state.album = KNOWN.albums[0];
+  state.inventory  = {};
+
+  // Load inventory from Supabase
+  await loadInventoryFromSupabase();
+
+  // Also submit to submissions table for coordinator matching
+  scheduleSubmissionSync();
+
+  nav('albums');
+}
+
+// ================================================================
+// INVENTORY — Supabase as source of truth
+// ================================================================
+async function loadInventoryFromSupabase() {
+  if (!state.accountId) return;
+  try {
+    var rows = await sbGet('/rest/v1/inventory?select=*&account_id=eq.' + state.accountId);
+    state.inventory = {};
+    (rows || []).forEach(function(row) {
+      var k = sceneKey(row.album, row.theme, row.scene_name);
+      state.inventory[k] = {
+        album: row.album, theme: row.theme, scene_name: row.scene_name,
+        fragments: row.fragments, completed: row.completed,
+        progress: {
+          owned: (row.fragments || []).filter(function(f){ return f.status !== 'MISSING'; }).length,
+          total: (row.fragments || []).length
+        }
+      };
+    });
+  } catch(e) {
+    console.error('Failed to load inventory:', e);
+  }
+}
+
+async function saveSceneToSupabase(album, theme, sceneName, fragments, completed) {
+  if (!state.accountId) return;
+  try {
+    await sbUpsert('/rest/v1/inventory', {
+      account_id: state.accountId,
+      album: album,
+      theme: theme,
+      scene_name: sceneName,
+      fragments: fragments,
+      completed: completed,
+      updated_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.error('Failed to save scene:', e);
+  }
+}
+
+async function migrateInventory(accountId, inventoryData) {
+  var scenes = Object.values(inventoryData);
+  if (!scenes.length) return;
+  var rows = scenes.map(function(sc) {
+    return {
+      account_id: accountId,
+      album: sc.album || KNOWN.albums[0],
+      theme: sc.theme,
+      scene_name: sc.scene_name,
+      fragments: sc.fragments || [],
+      completed: sc.completed || false,
+      updated_at: new Date().toISOString()
+    };
+  });
+  // Batch upsert in chunks of 50
+  for (var i = 0; i < rows.length; i += 50) {
+    var chunk = rows.slice(i, i + 50);
+    await sbUpsert('/rest/v1/inventory', chunk);
+  }
+}
+
+// ================================================================
+// SUBMISSION SYNC (coordinator matching)
+// ================================================================
+var _syncTimer = null;
+function scheduleSubmissionSync() {
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(syncSubmission, 2000);
+}
+
+async function syncSubmission() {
+  if (!state.accountId || !state.memberName) return;
+  var scenes = Object.values(state.inventory);
+  if (!scenes.length) return;
+  try {
+    var payload = {
+      member_name: state.memberName,
+      alliance: state.alliance || null,
+      state_number: state.stateNumber ? parseInt(state.stateNumber) : null,
+      submitted_at: new Date().toISOString(),
+      inventory: scenes
+    };
+    await fetch(SUPABASE_URL + '/rest/v1/submissions', {
+      method: 'POST',
+      headers: sbHeaders({ 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+// ================================================================
+// PERSIST (localStorage cache only -- Supabase is source of truth)
+// ================================================================
+function persist() {
+  // Still cache locally for fast loads
+  localStorage.setItem(KEY, JSON.stringify({
+    memberName: state.memberName, alliance: state.alliance,
+    stateNumber: state.stateNumber, album: state.album, theme: state.theme,
+    accountId: state.accountId
+  }));
+}
+
+function load() {
+  try {
+    var r = localStorage.getItem(KEY);
+    if (r) {
+      var s = JSON.parse(r);
+      state.memberName  = s.memberName  || '';
+      state.alliance    = s.alliance    || '';
+      state.stateNumber = s.stateNumber || '';
+      state.album       = s.album       || '';
+      state.accountId   = s.accountId   || null;
+    }
+  } catch(e) {}
+}
+
+// ================================================================
+// ACCOUNT PICKER UI
+// ================================================================
+function goAccountPicker() {
+  renderAccountPicker();
+  showScreen('screen-account-picker');
+}
+
+function renderAccountPicker() {
+  document.getElementById('picker-discord-name').textContent = 'Signed in as ' + state.discordName;
+  var el = document.getElementById('account-list');
+  if (!state.accounts.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-style:italic;padding:16px 0;">No accounts yet.</div>';
+    return;
+  }
+  el.innerHTML = state.accounts.map(function(a) {
+    var isActive = a.id === state.accountId;
+    return '<button onclick="selectAccount(' + JSON.stringify(a).replace(/"/g,'&quot;') + ')" style="width:100%;text-align:left;padding:12px 14px;background:' + (isActive ? 'rgba(232,168,32,.1)' : 'var(--surface2)') + ';border:1px solid ' + (isActive ? 'rgba(232,168,32,.4)' : 'var(--border)') + ';border-radius:6px;margin-bottom:8px;cursor:pointer;">'
+      + '<div style="font-family:Cinzel,serif;font-size:.82rem;color:' + (isActive ? 'var(--gold-bright)' : 'var(--text)') + ';">' + a.in_game_name + (isActive ? ' <span style="font-size:.6rem;color:var(--gold);">&#10003; active</span>' : '') + '</div>'
+      + '<div style="font-size:.72rem;color:var(--text-dim);margin-top:2px;">' + (a.alliance || 'No alliance') + (a.state_number ? ' &bull; State ' + a.state_number : '') + '</div>'
+      + '</button>';
+  }).join('');
+}
+
+async function createAccount() {
+  var name     = document.getElementById('new-name-input').value.trim();
+  var alliance = document.getElementById('new-alliance-input').value.trim();
+  var stateNum = document.getElementById('new-state-input').value.trim();
+  var errEl    = document.getElementById('new-account-error');
+  errEl.style.display = 'none';
+
+  if (!name) { errEl.textContent = 'Enter your in-game name.'; errEl.style.display = 'block'; return; }
+
+  try {
+    // Check for localStorage migration data
+    var localData = null;
+    var localRaw = localStorage.getItem(KEY);
+    if (localRaw) {
+      var local = JSON.parse(localRaw);
+      if (local.memberName && local.memberName.toLowerCase() === name.toLowerCase()) {
+        // Load full inventory from localStorage
+        var invRaw = localStorage.getItem(KEY);
+        if (invRaw) {
+          var inv = JSON.parse(invRaw).inventory;
+          if (inv && Object.keys(inv).length) localData = inv;
+        }
+      }
+    }
+
+    var account = await createGameAccount(name, alliance, stateNum, localData);
+    state.accounts.push(account);
+    if (localData) localStorage.removeItem(KEY);
+    await selectAccount(account);
+  } catch(e) {
+    errEl.textContent = 'Failed: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ================================================================
+// MODIFIED SAVE SCENE -- writes to Supabase + local state
+// ================================================================
 
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+name).classList.add('active');
+  var el = document.getElementById('screen-'+name);
+  if (el) el.classList.add('active');
   document.getElementById('progress-sticky').style.display=name==='fragments'?'block':'none';
-  document.getElementById('back-btn').classList.toggle('hidden',name==='setup'||name==='profile'||name==='albums');
+  var authScreens = ['login','account-picker','new-account','setup'];
+  var hideBack = authScreens.includes(name)||name==='albums';
+  document.getElementById('back-btn').classList.toggle('hidden', hideBack);
   const hasData=Object.keys(state.inventory).length>0;
-  document.getElementById('export-top-btn').classList.toggle('hidden',name==='setup'||name==='profile'||name==='export'||!hasData);
+  var hideSync = authScreens.includes(name)||name==='profile'||name==='export'||!hasData;
+  document.getElementById('export-top-btn').classList.toggle('hidden', hideSync);
+  state.screen = name;
   updateHeader(name);
 }
 
 function updateHeader(s){
   const t=document.getElementById('hdr-title'),b=document.getElementById('breadcrumb');
+  if(s==='login'||s==='account-picker'||s==='new-account'){t.textContent='Fragment Tracker';b.textContent='';return;}
   if(s==='setup'){t.textContent='Fragment Inventory';b.textContent='';return;}
   if(s==='profile'){t.textContent='My Profile';b.textContent=state.memberName||'';return;}
   if(s==='albums'){t.textContent=state.memberName;b.textContent='Select Album';return;}
   if(s==='themes'){t.textContent=state.album;b.textContent=state.memberName;return;}
   if(s==='scenes'){t.textContent=state.theme;b.innerHTML='<strong>'+state.album+'</strong>';return;}
   if(s==='fragments'){t.textContent=state.scene;b.innerHTML='<strong>'+state.album+' &rsaquo; '+state.theme+'</strong>';return;}
-  if(s==='export'){t.textContent='Export';b.textContent=state.memberName;return;}
+  if(s==='export'){t.textContent='Summary';b.textContent=state.memberName;return;}
   if(s==='matches'){t.textContent='My Matches';b.textContent=state.memberName;return;}
 }
 
@@ -465,6 +857,7 @@ function goBack(){
   else if(s==='fragments')nav('scenes');
   else if(s==='matches')nav('albums');
   else if(s==='profile')nav('albums');
+  else if(s==='export')nav('albums');
 }
 
 function nav(screen){
@@ -494,19 +887,35 @@ function doSetup(){
   persist();nav('albums');
 }
 
-function doProfileSave(){
+async function doProfileSave(){
   const alliance=document.getElementById('profile-alliance-input').value.trim();
   const stateNum=document.getElementById('profile-state-input').value.trim();
   if(!alliance){document.getElementById('profile-alliance-input').focus();return;}
   if(!stateNum||isNaN(parseInt(stateNum))){document.getElementById('profile-state-input').focus();return;}
-  state.alliance=alliance;state.stateNumber=parseInt(stateNum);
-  persist();nav('albums');
+  state.alliance=alliance;
+  state.stateNumber=parseInt(stateNum);
+  persist();
+  // Update game_account in Supabase
+  if (state.accountId) {
+    try {
+      await sbPatch('/rest/v1/game_accounts?id=eq.' + state.accountId, {
+        alliance: alliance,
+        state_number: parseInt(stateNum)
+      });
+      // Update local accounts cache
+      var acc = state.accounts.find(function(a){ return a.id === state.accountId; });
+      if (acc) { acc.alliance = alliance; acc.state_number = parseInt(stateNum); }
+    } catch(e) { console.error('Failed to update account:', e); }
+  }
+  nav('albums');
 }
 
 function renderProfile(){
   document.getElementById('profile-alliance-input').value=state.alliance||'';
   document.getElementById('profile-state-input').value=state.stateNumber||'';
   document.getElementById('profile-name-display').textContent=state.memberName;
+  var discordEl = document.getElementById('profile-discord-name');
+  if (discordEl) discordEl.textContent = state.discordName || '';
 }
 
 function selectAlbum(name){state.album=name;nav('themes');}
@@ -695,8 +1104,13 @@ function saveScene(){
   var k=sceneKey(state.album,state.theme,state.scene);
   var frags=fragData.map(function(f){return{position:f.position,stars:f.stars,status:f.status||'MISSING',duplicate_count:f.duplicate_count||0,requestable:f.stars>0&&f.stars<5};});
   var owned=frags.filter(function(f){return f.status!=='MISSING';}).length;
-  state.inventory[k]={album:state.album,theme:state.theme,scene_name:state.scene,progress:{owned:owned,total:frags.length},fragments:frags,completed:owned===frags.length};
-  persist();nav('scenes');
+  var completed=owned===frags.length;
+  state.inventory[k]={album:state.album,theme:state.theme,scene_name:state.scene,progress:{owned:owned,total:frags.length},fragments:frags,completed:completed};
+  persist();
+  // Save to Supabase (non-blocking)
+  saveSceneToSupabase(state.album, state.theme, state.scene, frags, completed);
+  scheduleSubmissionSync();
+  nav('scenes');
 }
 
 async function renderMatches(){
@@ -1068,16 +1482,12 @@ function legacyCopy(text,cb){
 }
 
 function initExportButtons(){
-  if(isSafariIOS()){
-    document.getElementById('dl-btn').style.display='none';
-    document.getElementById('copy-btn').style.display='block';
-    document.getElementById('export-hint-text').textContent='Tap Copy, then paste the JSON into Notes or a message to send to your coordinator.';
-  }
+  // Export screen no longer has platform-specific buttons -- nothing to init
 }
 
-function esc(str){return str.replace(/'/g,"\\'");}
+function esc(str){return String(str==null?'':str).replace(/'/g,"\\'");}
 
-document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='setup')doSetup();});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&state.screen==='new-account')createAccount();});
 
 // ================================================================
 // CATALOG OVERRIDES + CORRECTIONS (fetched from Supabase on load)
@@ -1153,19 +1563,79 @@ async function fetchCorrections() {
 load();
 if(!state.album && KNOWN.albums && KNOWN.albums.length) state.album = KNOWN.albums[0];
 
-// Fetch overrides then navigate
-Promise.all([fetchCatalogOverrides(), fetchCorrections()]).then(function() {
-  if(state.memberName){
-    if(!state.alliance||!state.stateNumber){
-      showScreen('profile');
-      renderProfile();
-    } else {
-      nav('albums');
-    }
-  } else {
-    nav('setup');
+// ================================================================
+// STARTUP -- check auth then navigate
+// ================================================================
+(async function init() {
+  // Load catalog overrides and corrections in parallel with auth check
+  var catalogPromise = Promise.all([fetchCatalogOverrides(), fetchCorrections()]);
+
+  // Check for existing session
+  var session = await getSession();
+
+  await catalogPromise;
+
+  if (!session) {
+    showScreen('screen-login');
+    return;
   }
-});
+
+  state.session = session;
+
+  // Get user info
+  var user = await getUserInfo();
+  if (!user) {
+    showScreen('screen-login');
+    return;
+  }
+
+  // Store userId on session for account creation
+  state.session._userId = user.id;
+  state.discordName = user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name || user.email) || 'Unknown';
+
+  // Load game accounts
+  await loadAccounts();
+
+  if (!state.accounts.length) {
+    // No accounts yet -- check for localStorage migration
+    var localRaw = localStorage.getItem(KEY);
+    var localName = '';
+    var localInventory = null;
+    if (localRaw) {
+      try {
+        var local = JSON.parse(localRaw);
+        localName = local.memberName || '';
+        localInventory = local.inventory || null;
+      } catch(e) {}
+    }
+    if (localName && localInventory && Object.keys(localInventory).length) {
+      var notice = document.getElementById('migration-notice');
+      notice.style.display = 'block';
+      notice.innerHTML = 'We found saved data for <strong style="color:var(--gold)">' + localName + '</strong>. Enter that name below to import it to your Discord account automatically.';
+      document.getElementById('new-name-input').value = localName;
+    }
+    showScreen('screen-new-account');
+    return;
+  }
+
+  // If we have a previously selected account, use it
+  if (state.accountId) {
+    var prev = state.accounts.find(function(a){ return a.id === state.accountId; });
+    if (prev) {
+      await selectAccount(prev);
+      return;
+    }
+  }
+
+  // Single account -- go straight in
+  if (state.accounts.length === 1) {
+    await selectAccount(state.accounts[0]);
+    return;
+  }
+
+  // Multiple accounts -- show picker
+  goAccountPicker();
+})();
 </script>
 </body>
 </html>
