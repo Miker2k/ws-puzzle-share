@@ -1366,6 +1366,8 @@ async function markReceived(btn) {
     setTimeout(function() { row.remove(); }, 400);
   }, 600);
 }
+
+function renderExport(){
   var scenes=Object.values(state.inventory);
   var allFrags=scenes.flatMap(function(s){return s.fragments||[];});
   var missing=allFrags.filter(function(f){return f.status==='MISSING';}).length;
