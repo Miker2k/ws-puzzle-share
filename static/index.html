@@ -499,7 +499,12 @@ async function sbPatch(path, body) {
 }
 
 async function sbUpsert(path, body) {
-  var res = await fetch(SUPABASE_URL + path, {
+  // Append on_conflict columns for inventory upserts
+  var url = SUPABASE_URL + path;
+  if (path.startsWith('/rest/v1/inventory')) {
+    url += (path.includes('?') ? '&' : '?') + 'on_conflict=account_id,album,theme,scene_name';
+  }
+  var res = await fetch(url, {
     method: 'POST',
     headers: sbHeaders({'Prefer':'resolution=merge-duplicates,return=minimal'}),
     body: JSON.stringify(body)
