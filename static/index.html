@@ -1435,12 +1435,10 @@ function restoreFromFile(input, confirmId) {
     var el = document.getElementById(confirmId);
     try {
       var data = JSON.parse(e.target.result);
-      // Accept full member export {member_name, inventory:[...]}
-      // or raw array of scenes [...]
       var name = data.member_name || null;
       var scenes = Array.isArray(data) ? data : (Array.isArray(data.inventory) ? data.inventory : null);
       if (!scenes) throw new Error('Unrecognised format');
-      // Restore inventory
+      // Restore inventory into state
       scenes.forEach(function(sc) {
         if (!sc.scene_name || !sc.theme) return;
         var album = sc.album || 'Tundra Album';
@@ -1450,14 +1448,27 @@ function restoreFromFile(input, confirmId) {
       // Restore name if we don't have one yet
       if (name && !state.memberName) {
         state.memberName = name;
-        document.getElementById('member-name-input').value = name;
+        var nameInput = document.getElementById('member-name-input');
+        if (nameInput) nameInput.value = name;
       }
       persist();
-      el.textContent = 'Restored ' + scenes.length + ' scene' + (scenes.length !== 1 ? 's' : '') + (name ? ' for ' + name : '') + '.';
+      el.textContent = 'Restoring ' + scenes.length + ' scene' + (scenes.length !== 1 ? 's' : '') + (name ? ' for ' + name : '') + '...';
       el.className = (confirmId.startsWith('restore') ? 'restore-confirm' : 'copy-confirm') + ' ok';
       el.style.display = 'block';
-      // If we have a name now, go to albums after brief delay
-      if (state.memberName) setTimeout(function(){ nav('albums'); }, 1200);
+
+      // Write to Supabase if we have an active account
+      if (state.accountId) {
+        migrateInventory(state.accountId, state.inventory).then(function() {
+          el.textContent = 'Restored ' + scenes.length + ' scene' + (scenes.length !== 1 ? 's' : '') + (name ? ' for ' + name : '') + '.';
+          scheduleSubmissionSync();
+          if (state.memberName) setTimeout(function(){ nav('albums'); }, 800);
+        }).catch(function(err) {
+          el.textContent = 'Restored locally but cloud sync failed: ' + err.message;
+          if (state.memberName) setTimeout(function(){ nav('albums'); }, 1500);
+        });
+      } else {
+        if (state.memberName) setTimeout(function(){ nav('albums'); }, 1200);
+      }
     } catch(err) {
       el.textContent = 'Could not read file — make sure it is a valid inventory JSON export.';
       el.className = (confirmId.startsWith('restore') ? 'restore-confirm' : 'copy-confirm') + ' err';
