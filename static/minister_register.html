@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minister Scheduling — WS-Puzzle-Share</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0b0e18;
+    --surface:  #131726;
+    --surface2: #1c2235;
+    --surface3: #242b40;
+    --border:   #2a3250;
+    --border2:  #3a4468;
+    --accent:   #4f7fff;
+    --accent2:  #7c3aed;
+    --gold:     #f0b429;
+    --teal:     #2dd4bf;
+    --danger:   #f87171;
+    --success:  #4ade80;
+    --text1:    #e8edf8;
+    --text2:    #8892b0;
+    --text3:    #4a5578;
+    --font-display: 'Rajdhani', sans-serif;
+    --font-body:    'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text1);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 64px;
+  }
+
+  /* subtle grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,127,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,127,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(79,127,255,0.15), rgba(124,58,237,0.15));
+    border: 1px solid rgba(79,127,255,0.3);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text1);
+    line-height: 1.1;
+  }
+
+  .header p {
+    font-size: 14px;
+    color: var(--text2);
+    margin-top: 8px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    animation: fadeUp 0.5s ease 0.1s both;
+  }
+
+  /* ── Step indicator ── */
+  .steps {
+    display: flex;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+
+  .step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.3s;
+    border: 2px solid var(--border2);
+    color: var(--text3);
+    background: var(--surface2);
+  }
+
+  .step-dot.active {
+    border-color: var(--accent);
+    color: #fff;
+    background: var(--accent);
+    box-shadow: 0 0 12px rgba(79,127,255,0.4);
+  }
+
+  .step-dot.done {
+    border-color: var(--teal);
+    color: var(--bg);
+    background: var(--teal);
+  }
+
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+
+  .step-line.done { background: var(--teal); }
+
+  .step-label {
+    font-size: 10px;
+    text-align: center;
+    margin-top: 5px;
+    color: var(--text3);
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .step-label.active { color: var(--accent); }
+  .step-label.done   { color: var(--teal); }
+
+  .steps-wrap {
+    margin-bottom: 28px;
+  }
+
+  .steps-labels {
+    display: flex;
+    margin-top: 4px;
+  }
+
+  .steps-labels > div {
+    flex: 1;
+    text-align: center;
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text1);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .section-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  /* ── Form elements ── */
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    padding: 11px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text1);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--text3); }
+
+  .btn {
+    padding: 11px 18px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn:not(:disabled):hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn:not(:disabled):active { transform: translateY(0); filter: brightness(0.95); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #3a6ee8);
+    color: #fff;
+    width: 100%;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text1);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-row .btn-secondary { flex: 1; }
+  .btn-row .btn-primary   { flex: 2; }
+
+  /* ── User match results ── */
+  .match-btn {
+    width: 100%;
+    text-align: left;
+    padding: 11px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text1);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    transition: all 0.15s;
+  }
+
+  .match-btn:hover {
+    border-color: var(--accent);
+    background: rgba(79,127,255,0.06);
+  }
+
+  .match-name { font-weight: 600; font-size: 14px; }
+  .match-meta { font-size: 12px; color: var(--text2); }
+
+  /* ── Confirmed user pill ── */
+  .confirmed-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(45,212,191,0.07);
+    border: 1px solid rgba(45,212,191,0.25);
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .confirmed-check {
+    width: 22px;
+    height: 22px;
+    background: var(--teal);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--bg);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .confirmed-name { font-weight: 600; font-size: 14px; }
+  .confirmed-meta { font-size: 12px; color: var(--text2); }
+
+  /* ── Type selector ── */
+  .type-btn {
+    width: 100%;
+    text-align: left;
+    padding: 14px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text1);
+    font-family: var(--font-body);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+  }
+
+  .type-btn:hover { border-color: var(--border2); background: var(--surface3); }
+
+  .type-btn.selected {
+    background: rgba(79,127,255,0.1);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .type-icon { font-size: 20px; flex-shrink: 0; }
+  .type-check { margin-left: auto; color: var(--accent); font-size: 16px; }
+
+  /* ── Slot picker ── */
+  .slot-group { margin-bottom: 16px; }
+
+  .slot-rank-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .rank-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .rank-1 { background: var(--accent);  color: #fff; }
+  .rank-2 { background: var(--accent2); color: #fff; }
+  .rank-3 { background: var(--surface3); border: 1px solid var(--border2); color: var(--text2); }
+
+  .rank-label-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text1);
+  }
+
+  .rank-optional {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text3);
+  }
+
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text1);
+    font-family: var(--font-body);
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238892b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+
+  select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+
+  /* ── Alert boxes ── */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .alert-error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: var(--danger); }
+  .alert-info    { background: rgba(79,127,255,0.08); border: 1px solid rgba(79,127,255,0.25); color: #93b4ff; }
+
+  /* ── Summary card ── */
+  .summary {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+
+  .summary-label { color: var(--text2); }
+
+  .summary-value {
+    font-weight: 600;
+    color: var(--text1);
+    text-align: right;
+  }
+
+  .summary-value.accent { color: var(--accent); font-family: var(--font-display); font-size: 15px; }
+
+  .summary-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+  }
+
+  /* ── Result states ── */
+  .result-center {
+    text-align: center;
+    padding: 12px 0;
+  }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  .result-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 16px;
+  }
+
+  .result-icon.success { background: rgba(74,222,128,0.12); border: 2px solid var(--success); }
+  .result-icon.fail    { background: rgba(248,113,113,0.1);  border: 2px solid var(--danger); }
+
+  .result-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .result-note {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .assigned-time {
+    display: inline-block;
+    padding: 10px 28px;
+    background: rgba(79,127,255,0.12);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text1);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .assigned-sub {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fade-in { animation: fadeUp 0.3s ease both; }
+
+  /* ── Utilities ── */
+  .hidden { display: none !important; }
+  .mt8  { margin-top: 8px; }
+  .mt16 { margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">⚔ SvS Prep</div>
+    <h1>Minister Scheduling</h1>
+    <p>Self-register your alliance minister slot</p>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Step indicator -->
+    <div class="steps-wrap">
+      <div class="steps" id="steps-dots">
+        <div class="step-dot active" id="dot-1">1</div>
+        <div class="step-line" id="line-1"></div>
+        <div class="step-dot" id="dot-2">2</div>
+        <div class="step-line" id="line-2"></div>
+        <div class="step-dot" id="dot-3">3</div>
+        <div class="step-line" id="line-3"></div>
+        <div class="step-dot" id="dot-4">4</div>
+      </div>
+      <div class="steps-labels">
+        <div><div class="step-label active" id="lbl-1">Identify</div></div>
+        <div><div class="step-label" id="lbl-2">Type</div></div>
+        <div><div class="step-label" id="lbl-3">Slots</div></div>
+        <div><div class="step-label" id="lbl-4">Confirm</div></div>
+      </div>
+    </div>
+
+    <!-- ── Step 1: Identify ── -->
+    <div id="step-1" class="fade-in">
+      <div class="section-title">Who are you?</div>
+      <div class="section-sub">Enter your in-game FID or search by name to confirm your identity.</div>
+
+      <div class="field-label">FID or player name</div>
+      <div class="search-row">
+        <input type="text" id="fid-input" placeholder="e.g. 12345678 or YourName" autocomplete="off">
+        <button class="btn btn-secondary" id="search-btn" onclick="lookupFid()">Search</button>
+      </div>
+
+      <div id="fid-error" class="alert alert-error hidden"></div>
+      <div id="fid-matches"></div>
+      <div id="confirmed-user" class="hidden"></div>
+
+      <button class="btn btn-primary mt16" id="step1-next" disabled onclick="goTo(2)">Continue →</button>
+    </div>
+
+    <!-- ── Step 2: Appointment type ── -->
+    <div id="step-2" class="hidden fade-in">
+      <div class="section-title">Minister role</div>
+      <div class="section-sub">Which minister position are you signing up for?</div>
+
+      <button class="type-btn" id="type-construction" onclick="selectType('Construction Day')">
+        <span class="type-icon">🏗️</span>
+        <span>Construction Day</span>
+        <span class="type-check hidden">✓</span>
+      </button>
+      <button class="type-btn" id="type-research" onclick="selectType('Research Day')">
+        <span class="type-icon">🔬</span>
+        <span>Research Day</span>
+        <span class="type-check hidden">✓</span>
+      </button>
+      <button class="type-btn" id="type-training" onclick="selectType('Troops Training Day')">
+        <span class="type-icon">⚔️</span>
+        <span>Troops Training Day</span>
+        <span class="type-check hidden">✓</span>
+      </button>
+
+      <div class="btn-row mt16">
+        <button class="btn btn-secondary" onclick="goTo(1)">← Back</button>
+        <button class="btn btn-primary" id="step2-next" disabled onclick="goTo(3)">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Pick slots ── -->
+    <div id="step-3" class="hidden fade-in">
+      <div class="section-title">Pick your times</div>
+      <div class="section-sub">Choose up to 3 slots in order of preference. If your 1st choice is taken, we'll try your 2nd, then 3rd. Earliest submission wins any tie.</div>
+
+      <div id="slots-loading" class="alert alert-info">Loading available slots...</div>
+
+      <div id="slot-pickers" class="hidden">
+        <div class="slot-group">
+          <div class="slot-rank-label">
+            <span class="rank-badge rank-1">1</span>
+            <span class="rank-label-text">1st choice</span>
+          </div>
+          <select id="pref-1" onchange="updateSlotSelects()">
+            <option value="">-- Select a time slot --</option>
+          </select>
+        </div>
+
+        <div class="slot-group">
+          <div class="slot-rank-label">
+            <span class="rank-badge rank-2">2</span>
+            <span class="rank-label-text">2nd choice <span class="rank-optional">(optional)</span></span>
+          </div>
+          <select id="pref-2" onchange="updateSlotSelects()">
+            <option value="">-- Select a time slot --</option>
+          </select>
+        </div>
+
+        <div class="slot-group">
+          <div class="slot-rank-label">
+            <span class="rank-badge rank-3">3</span>
+            <span class="rank-label-text">3rd choice <span class="rank-optional">(optional)</span></span>
+          </div>
+          <select id="pref-3" onchange="updateSlotSelects()">
+            <option value="">-- Select a time slot --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row mt16">
+        <button class="btn btn-secondary" onclick="goTo(2)">← Back</button>
+        <button class="btn btn-primary" id="step3-next" disabled onclick="goTo(4)">Review →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 4: Confirm + result ── -->
+    <div id="step-4" class="hidden fade-in">
+
+      <!-- Pre-submit review -->
+      <div id="review-panel">
+        <div class="section-title">Confirm registration</div>
+        <div class="section-sub">Review your details before submitting.</div>
+
+        <div class="summary">
+          <div class="summary-row">
+            <span class="summary-label">Player</span>
+            <span class="summary-value" id="sum-player"></span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Alliance</span>
+            <span class="summary-value" id="sum-alliance"></span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Role</span>
+            <span class="summary-value" id="sum-type"></span>
+          </div>
+          <hr class="summary-divider">
+          <div class="summary-row">
+            <span class="summary-label">1st choice</span>
+            <span class="summary-value accent" id="sum-pref1"></span>
+          </div>
+          <div class="summary-row" id="sum-row2">
+            <span class="summary-label">2nd choice</span>
+            <span class="summary-value" id="sum-pref2"></span>
+          </div>
+          <div class="summary-row" id="sum-row3">
+            <span class="summary-label">3rd choice</span>
+            <span class="summary-value" id="sum-pref3"></span>
+          </div>
+        </div>
+
+        <div id="submit-error" class="alert alert-error hidden"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="goTo(3)">← Back</button>
+          <button class="btn btn-primary" id="submit-btn" onclick="submitRegistration()">Confirm registration</button>
+        </div>
+      </div>
+
+      <!-- Post-submit waiting -->
+      <div id="waiting-panel" class="hidden result-center">
+        <div class="spinner"></div>
+        <div class="result-title">Submitted!</div>
+        <div class="result-note">Waiting for the next sync cycle to assign your slot.<br>This updates automatically — no need to refresh.<br>Syncs run every ~10 minutes.</div>
+      </div>
+
+      <!-- Success -->
+      <div id="success-panel" class="hidden result-center">
+        <div class="result-icon success">✓</div>
+        <div class="result-title">You're booked!</div>
+        <div class="result-note" id="success-note"></div>
+        <div class="assigned-time" id="assigned-time"></div>
+        <div class="assigned-sub" id="assigned-sub"></div>
+        <button class="btn btn-secondary mt16" onclick="resetForm()">Register another slot</button>
+      </div>
+
+      <!-- No slots -->
+      <div id="fail-panel" class="hidden result-center">
+        <div class="result-icon fail">✗</div>
+        <div class="result-title">No slots available</div>
+        <div class="result-note" id="fail-note"></div>
+        <button class="btn btn-primary mt16" onclick="goTo(3); resetPrefs()">Try different times</button>
+      </div>
+
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /wrap -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+// Replace these with your actual values (or use a build step with env vars)
+const SUPABASE_URL      = 'https://aevurncobtrfutcfufut.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
+// ── END CONFIG ────────────────────────────────────────────────────────────────
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  currentStep:     1,
+  selectedUser:    null,   // { fid, nickname, alliance_name, alliance_id }
+  appointmentType: null,
+  pref1: '', pref2: '', pref3: '',
+  takenSlots:      new Set(),
+  pendingId:       null,
+  pollInterval:    null,
+};
+
+// ── Supabase fetch helper ─────────────────────────────────────────────────────
+async function sb(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey':        SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type':  'application/json',
+      'Prefer':        options.prefer || 'return=representation',
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.json().catch(() => null);
+}
+
+// ── Time slot generation (matches bot slot_mode=0) ────────────────────────────
+function generateSlots(takenSet, exclude = []) {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const t = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      if (!takenSet.has(t) && !exclude.includes(t)) slots.push(t);
+    }
+  }
+  return slots;
+}
+
+// ── Step navigation ───────────────────────────────────────────────────────────
+function goTo(step) {
+  // Hide current
+  document.getElementById(`step-${state.currentStep}`).classList.add('hidden');
+
+  // Update dots
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById(`dot-${i}`);
+    const lbl = document.getElementById(`lbl-${i}`);
+    dot.classList.remove('active','done');
+    lbl.classList.remove('active','done');
+    if (i < step)      { dot.classList.add('done');   lbl.classList.add('done'); dot.textContent = '✓'; }
+    else if (i === step){ dot.classList.add('active'); lbl.classList.add('active'); dot.textContent = i; }
+    else               { dot.textContent = i; }
+  }
+  for (let i = 1; i <= 3; i++) {
+    const line = document.getElementById(`line-${i}`);
+    line.classList.toggle('done', i < step);
+  }
+
+  state.currentStep = step;
+  const panel = document.getElementById(`step-${step}`);
+  panel.classList.remove('hidden');
+  panel.classList.remove('fade-in');
+  void panel.offsetWidth; // reflow to restart animation
+  panel.classList.add('fade-in');
+
+  if (step === 3) loadSlots();
+  if (step === 4) populateSummary();
+}
+
+// ── Step 1: FID lookup ────────────────────────────────────────────────────────
+async function lookupFid() {
+  const val = document.getElementById('fid-input').value.trim();
+  if (!val) return;
+
+  const errEl   = document.getElementById('fid-error');
+  const matchEl = document.getElementById('fid-matches');
+  const btn     = document.getElementById('search-btn');
+
+  errEl.classList.add('hidden');
+  matchEl.innerHTML = '';
+  state.selectedUser = null;
+  document.getElementById('confirmed-user').classList.add('hidden');
+  document.getElementById('step1-next').disabled = true;
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  try {
+    let rows = await sb(`users_mirror?fid=eq.${encodeURIComponent(val)}&select=fid,nickname,alliance_name,alliance_id`);
+
+    if (!rows || rows.length === 0) {
+      rows = await sb(`users_mirror?nickname=ilike.*${encodeURIComponent(val)}*&select=fid,nickname,alliance_name,alliance_id&limit=10`);
+    }
+
+    if (!rows || rows.length === 0) {
+      errEl.textContent = 'No player found. Make sure you\'re registered with the alliance bot.';
+      errEl.classList.remove('hidden');
+    } else {
+      matchEl.innerHTML = rows.map(u => `
+        <button class="match-btn" onclick='confirmUser(${JSON.stringify(u)})'>
+          <span class="match-name">${escHtml(u.nickname)}</span>
+          <span class="match-meta">${escHtml(u.alliance_name || '')} · FID ${escHtml(String(u.fid))}</span>
+        </button>
+      `).join('');
+    }
+  } catch(e) {
+    errEl.textContent = `Lookup failed: ${e.message}`;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.textContent = 'Search';
+    btn.disabled = false;
+  }
+}
+
+function confirmUser(user) {
+  state.selectedUser = user;
+  document.getElementById('fid-matches').innerHTML = '';
+  document.getElementById('confirmed-user').innerHTML = `
+    <div class="confirmed-user">
+      <div class="confirmed-check">✓</div>
+      <div>
+        <div class="confirmed-name">${escHtml(user.nickname)}</div>
+        <div class="confirmed-meta">${escHtml(user.alliance_name || '')} · FID ${escHtml(String(user.fid))}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('confirmed-user').classList.remove('hidden');
+  document.getElementById('step1-next').disabled = false;
+}
+
+// Enter key on FID input
+document.getElementById('fid-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookupFid();
+});
+
+// ── Step 2: Type selection ────────────────────────────────────────────────────
+function selectType(type) {
+  state.appointmentType = type;
+  const map = { 'Construction Day': 'construction', 'Research Day': 'research', 'Troops Training Day': 'training' };
+  ['construction','research','training'].forEach(k => {
+    const btn = document.getElementById(`type-${k}`);
+    const check = btn.querySelector('.type-check');
+    if (map[type] === k) {
+      btn.classList.add('selected');
+      check.classList.remove('hidden');
+    } else {
+      btn.classList.remove('selected');
+      check.classList.add('hidden');
+    }
+  });
+  document.getElementById('step2-next').disabled = false;
+}
+
+// ── Step 3: Slot loading ──────────────────────────────────────────────────────
+async function loadSlots() {
+  document.getElementById('slots-loading').classList.remove('hidden');
+  document.getElementById('slot-pickers').classList.add('hidden');
+
+  try {
+    const rows = await sb(`minister_appointments?appointment_type=eq.${encodeURIComponent(state.appointmentType)}&select=time`);
+    state.takenSlots = new Set((rows || []).map(r => r.time));
+  } catch(e) {
+    state.takenSlots = new Set();
+  }
+
+  document.getElementById('slots-loading').classList.add('hidden');
+  document.getElementById('slot-pickers').classList.remove('hidden');
+  populateSelects();
+}
+
+function populateSelects() {
+  const selects = ['pref-1','pref-2','pref-3'];
+  const values  = [state.pref1, state.pref2, state.pref3];
+
+  selects.forEach((id, idx) => {
+    const others = values.filter((_,i) => i !== idx).filter(Boolean);
+    const available = generateSlots(state.takenSlots, others);
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = '<option value="">-- Select a time slot --</option>'
+      + available.map(t => `<option value="${t}"${t===current?' selected':''}>${t}</option>`).join('');
+  });
+
+  checkStep3();
+}
+
+function updateSlotSelects() {
+  state.pref1 = document.getElementById('pref-1').value;
+  state.pref2 = document.getElementById('pref-2').value;
+  state.pref3 = document.getElementById('pref-3').value;
+  populateSelects();
+}
+
+function checkStep3() {
+  document.getElementById('step3-next').disabled = !document.getElementById('pref-1').value;
+}
+
+function resetPrefs() {
+  state.pref1 = ''; state.pref2 = ''; state.pref3 = '';
+  ['pref-1','pref-2','pref-3'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── Step 4: Summary + submit ──────────────────────────────────────────────────
+function populateSummary() {
+  const u = state.selectedUser;
+  document.getElementById('sum-player').textContent   = `${u.nickname} (FID ${u.fid})`;
+  document.getElementById('sum-alliance').textContent = u.alliance_name || '—';
+  document.getElementById('sum-type').textContent     = state.appointmentType;
+  document.getElementById('sum-pref1').textContent    = state.pref1;
+  document.getElementById('sum-pref2').textContent    = state.pref2 || '—';
+  document.getElementById('sum-pref3').textContent    = state.pref3 || '—';
+  document.getElementById('sum-row2').style.display   = state.pref2 ? '' : 'none';
+  document.getElementById('sum-row3').style.display   = state.pref3 ? '' : 'none';
+
+  showPanel('review-panel');
+}
+
+async function submitRegistration() {
+  const errEl = document.getElementById('submit-error');
+  const btn   = document.getElementById('submit-btn');
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const payload = {
+      fid:              state.selectedUser.fid,
+      nickname:         state.selectedUser.nickname,
+      alliance_name:    state.selectedUser.alliance_name,
+      alliance_id:      state.selectedUser.alliance_id,
+      appointment_type: state.appointmentType,
+      pref_1:           state.pref1,
+      pref_2:           state.pref2 || null,
+      pref_3:           state.pref3 || null,
+      status:           'pending',
+    };
+
+    const rows = await sb('minister_pending', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      prefer: 'return=representation',
+    });
+
+    state.pendingId = rows?.[0]?.id;
+    showPanel('waiting-panel');
+    startPolling();
+
+  } catch(e) {
+    const msg = e.message.includes('idx_pending_fid_type')
+      ? 'You already have a pending registration for this type. Wait for it to process or contact an admin.'
+      : `Submission failed: ${e.message}`;
+    errEl.textContent = msg;
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Confirm registration';
+  }
+}
+
+function startPolling() {
+  let attempts = 0;
+  state.pollInterval = setInterval(async () => {
+    if (++attempts > 90 || !state.pendingId) { clearInterval(state.pollInterval); return; }
+    try {
+      const rows = await sb(`minister_pending?id=eq.${state.pendingId}&select=status,assigned_time,assigned_rank,sync_note`);
+      const row = rows?.[0];
+      if (row && row.status !== 'pending') {
+        clearInterval(state.pollInterval);
+        if (row.status === 'synced') showSuccess(row);
+        else showFail(row);
+      }
+    } catch(e) { /* ignore polling errors */ }
+  }, 10000);
+}
+
+function showSuccess(row) {
+  document.getElementById('success-note').textContent = row.sync_note || '';
+  document.getElementById('assigned-time').textContent = row.assigned_time;
+  document.getElementById('assigned-sub').textContent =
+    `${state.appointmentType} · Preference ${row.assigned_rank}`;
+  showPanel('success-panel');
+}
+
+function showFail(row) {
+  document.getElementById('fail-note').textContent = row.sync_note || 'All preferences were taken.';
+  showPanel('fail-panel');
+}
+
+function showPanel(id) {
+  ['review-panel','waiting-panel','success-panel','fail-panel'].forEach(p => {
+    document.getElementById(p).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function resetForm() {
+  Object.assign(state, {
+    currentStep: 1, selectedUser: null, appointmentType: null,
+    pref1: '', pref2: '', pref3: '', takenSlots: new Set(), pendingId: null,
+  });
+  if (state.pollInterval) clearInterval(state.pollInterval);
+  document.getElementById('fid-input').value = '';
+  document.getElementById('fid-matches').innerHTML = '';
+  document.getElementById('confirmed-user').classList.add('hidden');
+  document.getElementById('fid-error').classList.add('hidden');
+  document.getElementById('step1-next').disabled = true;
+  goTo(1);
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
