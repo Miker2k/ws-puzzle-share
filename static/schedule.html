@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minister Schedule — WS-Puzzle-Share</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0b0e18;
+    --surface:  #131726;
+    --surface2: #1c2235;
+    --surface3: #242b40;
+    --border:   #2a3250;
+    --border2:  #3a4468;
+    --accent:   #4f7fff;
+    --gold:     #f0b429;
+    --teal:     #2dd4bf;
+    --danger:   #f87171;
+    --success:  #4ade80;
+    --purple:   #a78bfa;
+    --text1:    #e8edf8;
+    --text2:    #8892b0;
+    --text3:    #4a5578;
+    --font-display: 'Rajdhani', sans-serif;
+    --font-body:    'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text1);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    padding: 32px 16px 64px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,127,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,127,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .header-left {}
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(79,127,255,0.15), rgba(124,58,237,0.15));
+    border: 1px solid rgba(79,127,255,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1.1;
+  }
+
+  .header-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* ── Refresh info ── */
+  .refresh-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover { border-color: var(--accent); color: var(--text1); }
+
+  .refresh-btn .icon { font-size: 14px; transition: transform 0.3s; }
+  .refresh-btn.spinning .icon { animation: spin 0.8s linear infinite; }
+
+  .last-updated {
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── Summary pills ── */
+  .summary-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    animation: fadeUp 0.4s ease 0.05s both;
+  }
+
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+  }
+
+  .pill-booked {
+    background: rgba(79,127,255,0.12);
+    border: 1px solid rgba(79,127,255,0.3);
+    color: var(--accent);
+  }
+
+  .pill-open {
+    background: rgba(74,222,128,0.08);
+    border: 1px solid rgba(74,222,128,0.25);
+    color: var(--success);
+  }
+
+  .pill-total {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  .pill-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    animation: fadeUp 0.4s ease 0.1s both;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 9px 8px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text2);
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .tab:hover { color: var(--text1); background: var(--surface2); }
+
+  .tab.active {
+    background: var(--surface2);
+    color: var(--text1);
+    border: 1px solid var(--border2);
+  }
+
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(79,127,255,0.2);
+    color: var(--accent);
+  }
+
+  /* ── Schedule grid ── */
+  .tab-panel { display: none; animation: fadeUp 0.3s ease both; }
+  .tab-panel.active { display: block; }
+
+  .grid-header {
+    display: grid;
+    grid-template-columns: 70px 1fr 1fr;
+    gap: 2px;
+    margin-bottom: 4px;
+    padding: 0 4px;
+  }
+
+  .grid-header span {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    padding: 4px 8px;
+  }
+
+  .schedule-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Two-column layout for wider screens */
+  @media (min-width: 600px) {
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+  }
+
+  .slot-row {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+
+  .slot-row.booked {
+    border-color: rgba(79,127,255,0.2);
+    background: rgba(79,127,255,0.04);
+  }
+
+  .slot-row.open {
+    border-color: var(--border);
+    background: var(--surface);
+  }
+
+  .slot-row:hover { border-color: var(--border2); }
+
+  .slot-time {
+    padding: 9px 10px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text2);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .slot-row.booked .slot-time { color: var(--text1); }
+
+  .slot-content {
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .slot-status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .booked .slot-status-dot  { background: var(--accent); }
+  .open   .slot-status-dot  { background: var(--surface3); border: 1px solid var(--border2); }
+
+  .slot-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .slot-alliance {
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .slot-open-label {
+    font-size: 12px;
+    color: var(--text3);
+  }
+
+  /* ── Loading / empty states ── */
+  .state-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 12px;
+    color: var(--text3);
+  }
+
+  .state-box .icon { font-size: 32px; }
+  .state-box p { font-size: 14px; }
+
+  .spinner-sm {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ── Progress bar (auto-refresh countdown) ── */
+  .refresh-bar-wrap {
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .refresh-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+    transition: width 1s linear;
+  }
+
+  /* ── Register CTA ── */
+  .cta {
+    margin-top: 28px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.4s ease 0.2s both;
+  }
+
+  .cta-text p:first-child {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .cta-text p:last-child { font-size: 13px; color: var(--text2); }
+
+  .cta-btn {
+    padding: 9px 18px;
+    background: linear-gradient(135deg, var(--accent), #3a6ee8);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .cta-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-badge">⚔ SvS Prep</div>
+      <h1>Minister Schedule</h1>
+      <p class="header-sub">Live schedule — syncs with the bot every 10 minutes</p>
+    </div>
+    <div class="refresh-info">
+      <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">
+        <span class="icon">↻</span> Refresh
+      </button>
+      <span class="last-updated" id="last-updated">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Auto-refresh progress bar -->
+  <div class="refresh-bar-wrap">
+    <div class="refresh-bar" id="refresh-bar" style="width:100%"></div>
+  </div>
+
+  <!-- Summary pills (updated after load) -->
+  <div class="summary-row" id="summary-row">
+    <div class="pill pill-total"><span>Loading...</span></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-construction" onclick="switchTab('construction')">
+      🏗️ Construction
+      <span class="tab-count" id="count-construction">—</span>
+    </button>
+    <button class="tab" id="tab-research" onclick="switchTab('research')">
+      🔬 Research
+      <span class="tab-count" id="count-research">—</span>
+    </button>
+    <button class="tab" id="tab-training" onclick="switchTab('training')">
+      ⚔️ Training
+      <span class="tab-count" id="count-training">—</span>
+    </button>
+  </div>
+
+  <!-- Tab panels -->
+  <div id="panel-construction" class="tab-panel active"></div>
+  <div id="panel-research"     class="tab-panel"></div>
+  <div id="panel-training"     class="tab-panel"></div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="cta-text">
+      <p>Want to claim a slot?</p>
+      <p>Self-register your minister time directly from the web.</p>
+    </div>
+    <a href="minister_register.html" class="cta-btn">Register a slot →</a>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const SUPABASE_URL      = 'https://aevurncobtrfutcfufut.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFldnVybmNvYnRyZnV0Y2Z1ZnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTg2NjQsImV4cCI6MjA5MTA3NDY2NH0.LIkNO_Ks3KMAQZvCwPUeW6zTIkikIV8KOENH8pcaSjQ';
+const REFRESH_SECONDS   = 120; // auto-refresh every 2 minutes
+// ── END CONFIG ────────────────────────────────────────────────────────────────
+
+const TYPES = {
+  construction: 'Construction Day',
+  research:     'Research Day',
+  training:     'Troops Training Day',
+};
+
+const TOTAL_SLOTS = 48; // 30-min intervals across 24 hours
+
+let allAppointments = {}; // keyed by appointment_type
+let refreshTimer    = null;
+let countdownTimer  = null;
+let secondsLeft     = REFRESH_SECONDS;
+let activeTab       = 'construction';
+
+// ── Supabase helper ───────────────────────────────────────────────────────────
+async function sb(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey':        SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Time slots ────────────────────────────────────────────────────────────────
+function generateAllSlots() {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      slots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+    }
+  }
+  return slots;
+}
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+
+  try {
+    const rows = await sb('minister_appointments?select=fid,appointment_type,time,nickname,alliance_name&order=time.asc');
+
+    // Group by appointment type
+    allAppointments = {};
+    (rows || []).forEach(row => {
+      const key = row.appointment_type;
+      if (!allAppointments[key]) allAppointments[key] = {};
+      allAppointments[key][row.time] = row;
+    });
+
+    renderAll();
+    updateSummary();
+
+    const now = new Date();
+    document.getElementById('last-updated').textContent =
+      `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  } catch(e) {
+    document.getElementById('last-updated').textContent = 'Failed to load — retrying...';
+    console.error(e);
+  } finally {
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+    resetCountdown();
+  }
+}
+
+// ── Render all panels ─────────────────────────────────────────────────────────
+function renderAll() {
+  Object.entries(TYPES).forEach(([key, label]) => {
+    const booked = allAppointments[label] || {};
+    renderPanel(key, booked);
+
+    const count = Object.keys(booked).length;
+    document.getElementById(`count-${key}`).textContent = count;
+  });
+}
+
+function renderPanel(key, booked) {
+  const panel = document.getElementById(`panel-${key}`);
+  const allSlots = generateAllSlots();
+
+  if (allSlots.length === 0) {
+    panel.innerHTML = `<div class="state-box"><span class="icon">📭</span><p>No data available</p></div>`;
+    return;
+  }
+
+  const rows = allSlots.map(time => {
+    const entry = booked[time];
+    if (entry) {
+      const name     = escHtml(entry.nickname     || `FID ${entry.fid}`);
+      const alliance = escHtml(entry.alliance_name || '');
+      return `
+        <div class="slot-row booked">
+          <div class="slot-time">${time}</div>
+          <div class="slot-content">
+            <div class="slot-status-dot"></div>
+            <span class="slot-name">${name}</span>
+            ${alliance ? `<span class="slot-alliance">[${alliance}]</span>` : ''}
+          </div>
+        </div>`;
+    } else {
+      return `
+        <div class="slot-row open">
+          <div class="slot-time">${time}</div>
+          <div class="slot-content">
+            <div class="slot-status-dot"></div>
+            <span class="slot-open-label">Available</span>
+          </div>
+        </div>`;
+    }
+  }).join('');
+
+  panel.innerHTML = `<div class="schedule-grid">${rows}</div>`;
+}
+
+// ── Summary pills ─────────────────────────────────────────────────────────────
+function updateSummary() {
+  let totalBooked = 0;
+  Object.values(TYPES).forEach(label => {
+    totalBooked += Object.keys(allAppointments[label] || {}).length;
+  });
+
+  const totalSlots = TOTAL_SLOTS * 3;
+  const totalOpen  = totalSlots - totalBooked;
+
+  document.getElementById('summary-row').innerHTML = `
+    <div class="pill pill-booked">
+      <div class="pill-dot" style="background:var(--accent)"></div>
+      ${totalBooked} booked
+    </div>
+    <div class="pill pill-open">
+      <div class="pill-dot" style="background:var(--success)"></div>
+      ${totalOpen} available
+    </div>
+    <div class="pill pill-total">
+      ${totalSlots} total slots across 3 roles
+    </div>
+  `;
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(key) {
+  activeTab = key;
+  Object.keys(TYPES).forEach(k => {
+    document.getElementById(`tab-${k}`).classList.toggle('active', k === key);
+    document.getElementById(`panel-${k}`).classList.toggle('active', k === key);
+  });
+}
+
+// ── Auto-refresh countdown ────────────────────────────────────────────────────
+function resetCountdown() {
+  secondsLeft = REFRESH_SECONDS;
+  if (countdownTimer) clearInterval(countdownTimer);
+
+  const bar = document.getElementById('refresh-bar');
+  bar.style.width = '100%';
+
+  countdownTimer = setInterval(() => {
+    secondsLeft--;
+    const pct = (secondsLeft / REFRESH_SECONDS) * 100;
+    bar.style.width = `${Math.max(0, pct)}%`;
+
+    if (secondsLeft <= 0) {
+      clearInterval(countdownTimer);
+      loadAll();
+    }
+  }, 1000);
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// Show loading state immediately
+Object.keys(TYPES).forEach(key => {
+  document.getElementById(`panel-${key}`).innerHTML = `
+    <div class="state-box">
+      <div class="spinner-sm"></div>
+      <p>Loading schedule...</p>
+    </div>`;
+});
+
+loadAll();
+</script>
+</body>
+</html>
