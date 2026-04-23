@@ -1163,14 +1163,21 @@ async function renderMatches(){
   }
 
   try {
-    // Fetch all submissions -- filter state client-side to handle nulls from older submissions
+    // Use RPC to get deduplicated latest submission per member (avoids full table scan)
     var res = await fetch(
-      SUPABASE_URL+'/rest/v1/submissions?select=member_name,alliance,state_number,inventory,submitted_at&order=submitted_at.desc',
-      {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      SUPABASE_URL+'/rest/v1/rpc/get_latest_submissions',
+      {method:'POST', headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Content-Type':'application/json'}, body:'{}'}
     );
     if(!res.ok){
-      var errBody=await res.text().catch(function(){return res.status;});
-      throw new Error('HTTP '+res.status+' — '+errBody);
+      // Fallback to direct query with limit if RPC fails
+      res = await fetch(
+        SUPABASE_URL+'/rest/v1/submissions?select=member_name,alliance,state_number,inventory,submitted_at&order=submitted_at.desc&limit=200',
+        {headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY}}
+      );
+      if(!res.ok){
+        var errBody=await res.text().catch(function(){return res.status;});
+        throw new Error('HTTP '+res.status+' — '+errBody);
+      }
     }
     var rows = await res.json();
     console.log('[WS Matches] Total rows from Supabase:', rows.length, rows.map(function(r){return r.member_name+'(state:'+r.state_number+')';}));
